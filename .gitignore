@@ -1,0 +1,17 @@
+# Environment files (keep the sanitized example)
+.env
+.env.*
+!.env.example
+
+# Dependency and virtual environment directories
+.venv/
+node_modules/
+
+# Build output
+dist/
+
+# Python cache
+__pycache__/
+
+# Log files
+*.log
