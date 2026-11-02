@@ -12,6 +12,15 @@ dist/
 
 # Python cache
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Local Supabase state
+supabase/.temp/
 
 # Log files
 *.log
