@@ -21,6 +21,7 @@ __pycache__/
 
 # Local Supabase state
 supabase/.temp/
+supabase/.branches/
 
 # Log files
 *.log
