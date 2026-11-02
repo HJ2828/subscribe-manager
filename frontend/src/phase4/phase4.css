@@ -1,0 +1,100 @@
+.phase4-page {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.phase4-review-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.28fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 24px;
+}
+
+.phase4-image-column,
+.phase4-form-column {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.phase4-image-column {
+  position: sticky;
+  top: 20px;
+}
+
+.phase4-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 20px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.phase4-card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.upload-box {
+  min-height: 320px;
+  border: 1px dashed #b8c1cd;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  color: #6b7280;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.upload-box input {
+  display: none;
+}
+
+.upload-box img {
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.phase4-upload-card > small {
+  color: var(--muted, #667085);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .phase4-review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .phase4-image-column {
+    position: static;
+  }
+
+  .upload-box {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 560px) {
+  .phase4-page {
+    padding: 24px 16px 48px;
+  }
+
+  .phase4-card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+}
