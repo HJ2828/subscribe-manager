@@ -20,7 +20,9 @@ import {
   Phase3FormPage,
   Phase3ListPage,
 } from "./phase3/Phase3Pages";
-import { Phase4ImagePage } from "./phase4/Phase4Pages";
+import {
+  Phase4ImageLibraryPage,
+} from "./phase4/Phase4Pages";
 import "./styles.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -1053,9 +1055,6 @@ function ItemListPage() {
           <AppLink to="/items/new" className="button primary">
             ＋ 직접 등록
           </AppLink>
-          <AppLink to="/images/new" className="button secondary">
-            이미지 등록
-          </AppLink>
         </div>
         {notice ? <NoticeBox notice={notice} /> : null}
         <section className="filter-card">
@@ -1734,7 +1733,7 @@ function SubscriptionDetailPage({ itemId }: { itemId: string }) {
                 </div>
                 <div>
                   <dt>최초 가입일</dt>
-                  <dd>{formatItemDate(item.first_billing_date)} · 일 단위</dd>
+                  <dd>{formatItemDate(item.first_billing_date)}</dd>
                 </div>
                 <div>
                   <dt>해지 기한 / 나의 검토일</dt>
@@ -2249,7 +2248,13 @@ export default function App() {
   if (path === "/images/new")
     return (
       <Protected>
-        <Phase4ImagePage navigation={<AppNavigation active="items" />} />
+        <Phase3FormPage navigation={<AppNavigation active="items" />} />
+      </Protected>
+    );
+  if (path === "/images")
+    return (
+      <Protected>
+        <Phase4ImageLibraryPage navigation={<AppNavigation active="items" />} />
       </Protected>
     );
   if (path === "/items/new")

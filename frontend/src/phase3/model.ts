@@ -163,11 +163,17 @@ export function displayDate(
   if (!value) return "날짜 확인 필요";
   if (precision === "month") {
     const [year, month] = value.split("-");
-    return `${year}년 ${Number(month)}월 · 월 단위`;
+    return `${year}년 ${Number(month)}월`;
   }
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return "날짜 확인 필요";
-  return `${new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date).replace(/\.$/, "")} · 일 단위`;
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(date)
+    .replace(/\.$/, "");
 }
 
 function anchoredDate(year: number, monthIndex: number, anchorDay: number) {

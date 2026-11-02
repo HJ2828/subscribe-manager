@@ -1,7 +1,11 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
-import { analyzeImage, confirmImage } from "../lib/api";
+import {
+  analyzeImage,
+  changeImageLifecycle,
+  confirmImage,
+} from "../lib/api";
 import { ManagedItemFormFields } from "../phase3/Phase3Pages";
 import {
   buildManagedItemPayload,
@@ -22,10 +26,52 @@ import "./phase4.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 
+export type ImageAssetRow = {
+  id: string;
+  item_id: string | null;
+  storage_path: string;
+  management_type: ManagementType;
+  mime_type: string;
+  size_bytes: number;
+  lifecycle_status: "active" | "trash" | "deleted" | "failed";
+  analysis_status: "not_started" | "processing" | "ready" | "failed";
+  original_status: "kept" | "pending_delete" | "deleted";
+  last_error_code: string | null;
+  trashed_at: string | null;
+  purge_after: string | null;
+  created_at: string;
+  signed_url?: string | null;
+};
+
 function navigate(path: string) {
   window.history.replaceState(null, "", path);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function Link({
+  to,
+  className,
+  children,
+}: {
+  to: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={to}
+      className={className}
+      onClick={(event) => {
+        if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+          event.preventDefault();
+          navigate(to);
+        }
+      }}
+    >
+      {children}
+    </a>
+  );
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -357,6 +403,261 @@ export function Phase4ImagePage({ navigation }: { navigation: ReactNode }) {
             />
           </section>
         </form>
+      </main>
+    </div>
+  );
+}
+
+function formatBytes(value: number) {
+  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))}KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "날짜 미확인";
+  return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(
+    new Date(value),
+  );
+}
+
+export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }) {
+  const { client, session } = useAuth();
+  const [tab, setTab] = useState<"kept" | "trash">("kept");
+  const [assets, setAssets] = useState<ImageAssetRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState("");
+  const [notice, setNotice] = useState<Notice>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!client || !session) return;
+    let active = true;
+    setLoading(true);
+    setNotice(null);
+    const query = client
+      .from("image_assets")
+      .select(
+        "id,item_id,storage_path,management_type,mime_type,size_bytes,lifecycle_status,analysis_status,original_status,last_error_code,trashed_at,purge_after,created_at",
+      )
+      .eq("user_id", session.user.id)
+      .neq("original_status", "deleted")
+      .order("created_at", { ascending: false });
+    const filtered =
+      tab === "trash"
+        ? query.in("lifecycle_status", ["trash", "failed"])
+        : query.eq("lifecycle_status", "active");
+    filtered.then(async ({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        setAssets([]);
+        setNotice({ tone: "error", text: "보관 이미지를 불러오지 못했어요." });
+        setLoading(false);
+        return;
+      }
+      const rows = (data || []) as ImageAssetRow[];
+      const resolved = await Promise.all(
+        rows.map(async (asset) => {
+          try {
+            const result = await client.storage
+              .from("user-images")
+              .createSignedUrl(asset.storage_path, 300);
+            if (result.error) throw result.error;
+            return { ...asset, signed_url: result.data.signedUrl };
+          } catch {
+            return { ...asset, signed_url: null };
+          }
+        }),
+      );
+      if (!active) return;
+      setAssets(resolved);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [client, reloadKey, session, tab]);
+
+  async function changeState(
+    asset: ImageAssetRow,
+    action: "trash" | "restore" | "delete" | "retry",
+  ) {
+    if (!session || busyId) return;
+    if (
+      action === "delete" &&
+      !window.confirm("이 이미지를 영구 삭제할까요? 삭제 후에는 복원할 수 없어요.")
+    )
+      return;
+    setBusyId(asset.id);
+    setNotice(null);
+    try {
+      if (action === "delete" || action === "retry") {
+        if (!client) return;
+        const removed = await client.storage
+          .from("user-images")
+          .remove([asset.storage_path]);
+        if (removed.error) throw removed.error;
+        const updated = await client
+          .from("image_assets")
+          .update({
+            lifecycle_status: "deleted",
+            original_status: "deleted",
+            original_deleted_at: new Date().toISOString(),
+            trashed_at: null,
+            purge_after: null,
+            last_error_code: null,
+          })
+          .eq("id", asset.id)
+          .eq("user_id", session.user.id);
+        if (updated.error) throw updated.error;
+      } else {
+        await changeImageLifecycle(session.access_token, asset.id, action);
+      }
+      setNotice({
+        tone: "success",
+        text:
+          action === "trash"
+            ? "이미지를 휴지통으로 옮겼어요."
+            : action === "restore"
+              ? "이미지를 보관함으로 복원했어요."
+              : "이미지를 영구 삭제했어요.",
+      });
+      setReloadKey((value) => value + 1);
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: errorMessage(error, "이미지 상태를 변경하지 못했어요."),
+      });
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  const totalSize = assets.reduce((sum, asset) => sum + asset.size_bytes, 0);
+  return (
+    <div className="app-shell items-shell">
+      {navigation}
+      <main className="phase4-page phase3-page image-library-page">
+        <header className="items-title">
+          <h1>이미지 관리</h1>
+          <p>보관 중인 원본을 확인하고 휴지통으로 이동하거나 복원할 수 있어요.</p>
+        </header>
+        <div className="items-actions">
+          <Link to="/items" className="button secondary">
+            관리 목록
+          </Link>
+        </div>
+        {notice ? (
+          <div className={`notice ${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}>
+            {notice.text}
+          </div>
+        ) : null}
+        <section className="phase4-card image-library-summary">
+          <div className="image-library-tabs" role="tablist" aria-label="이미지 상태">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "kept"}
+              className={tab === "kept" ? "active" : ""}
+              onClick={() => setTab("kept")}
+            >
+              보관 중
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "trash"}
+              className={tab === "trash" ? "active" : ""}
+              onClick={() => setTab("trash")}
+            >
+              휴지통
+            </button>
+          </div>
+          <p>
+            현재 탭 {assets.length}개 · {formatBytes(totalSize)}
+          </p>
+        </section>
+        {loading ? (
+          <section className="phase4-card image-library-empty">이미지를 불러오는 중…</section>
+        ) : assets.length ? (
+          <section className="image-library-grid" aria-live="polite">
+            {assets.map((asset) => (
+              <article className="phase4-card image-asset-card" key={asset.id}>
+                <div className="image-asset-preview">
+                  {asset.signed_url ? (
+                    <img src={asset.signed_url} alt="보관된 원본 이미지" />
+                  ) : (
+                    <span>미리보기를 불러올 수 없어요.</span>
+                  )}
+                </div>
+                <div className="image-asset-meta">
+                  <strong>{typeLabel(asset.management_type, true)}</strong>
+                  <span>{formatBytes(asset.size_bytes)} · {formatDate(asset.created_at)}</span>
+                  {asset.lifecycle_status === "failed" ? (
+                    <span className="image-asset-error">삭제 실패 · 재시도 필요</span>
+                  ) : tab === "trash" ? (
+                    <span>영구 삭제 예정 · {formatDate(asset.purge_after)}</span>
+                  ) : (
+                    <span>{asset.analysis_status === "ready" ? "분석 완료" : "분석 기록 있음"}</span>
+                  )}
+                </div>
+                <div className="image-asset-actions">
+                  {asset.item_id ? (
+                    <Link to={`/items/${asset.item_id}`} className="button secondary">
+                      연결 항목 보기
+                    </Link>
+                  ) : null}
+                  {asset.lifecycle_status === "failed" ? (
+                    <button
+                      type="button"
+                      className="button danger"
+                      disabled={Boolean(busyId)}
+                      onClick={() => changeState(asset, "retry")}
+                    >
+                      삭제 재시도
+                    </button>
+                  ) : tab === "trash" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={Boolean(busyId)}
+                        onClick={() => changeState(asset, "restore")}
+                      >
+                        복원
+                      </button>
+                      <button
+                        type="button"
+                        className="button danger"
+                        disabled={Boolean(busyId)}
+                        onClick={() => changeState(asset, "delete")}
+                      >
+                        영구 삭제
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={Boolean(busyId)}
+                      onClick={() => changeState(asset, "trash")}
+                    >
+                      휴지통으로
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : (
+          <section className="phase4-card image-library-empty">
+            <strong>{tab === "trash" ? "휴지통이 비어 있어요." : "보관 중인 이미지가 없어요."}</strong>
+            <p>
+              {tab === "trash"
+                ? "보관함에서 휴지통으로 옮긴 이미지가 여기에 표시돼요."
+                : "이미지 등록 시 ‘원본 이미지를 보관할게요’를 선택한 이미지가 표시돼요."}
+            </p>
+          </section>
+        )}
       </main>
     </div>
   );

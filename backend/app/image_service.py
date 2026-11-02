@@ -199,6 +199,17 @@ class ImageService:
             raise ApiError(401, "authentication_required", "로그인이 필요해요.")
         return {**self.supabase_headers, "Authorization": f"Bearer {user.access_token}"}
 
+    def storage_delete_headers(self, user: CurrentUser) -> dict[str, str]:
+        """Use server credentials after ownership was verified, with user RLS as fallback."""
+        secret = self.settings.supabase_secret_key
+        if secret:
+            return {
+                "apikey": secret,
+                "Authorization": f"Bearer {secret}",
+                "Content-Type": "application/json",
+            }
+        return self.user_headers(user)
+
     async def _request(
         self, method: str, url: str, *, headers: dict[str, str], **kwargs: Any
     ) -> httpx.Response:
@@ -566,7 +577,7 @@ class ImageService:
         response = await self._request(
             "DELETE",
             f"{self.base_url()}/storage/v1/object/{BUCKET}/{quote(asset.storage_path, safe='/')}",
-            headers=self.user_headers(user),
+            headers=self.storage_delete_headers(user),
         )
         if response.status_code not in (200, 204, 404):
             await self._patch_asset(
@@ -584,6 +595,8 @@ class ImageService:
                 "lifecycle_status": "deleted",
                 "original_status": "deleted",
                 "original_deleted_at": datetime.now(UTC).isoformat(),
+                "trashed_at": None,
+                "purge_after": None,
                 "last_error_code": None,
             },
         )
@@ -603,7 +616,7 @@ class ImageService:
                 "DELETE",
                 f"{self.base_url()}/storage/v1/object/{BUCKET}/"
                 f"{quote(asset.storage_path, safe='/')}",
-                headers=self.user_headers(user),
+                headers=self.storage_delete_headers(user),
             )
             if response.status_code not in (200, 204, 404):
                 values["original_status"] = "pending_delete"

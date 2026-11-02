@@ -13,7 +13,8 @@ import {
 describe("Phase 3 date precision", () => {
   it("keeps a year-month value as month precision", () => {
     expect(validDateValue("2025-01", "month")).toBe(true);
-    expect(displayDate("2025-01", "month")).toBe("2025년 1월 · 월 단위");
+    expect(displayDate("2025-01", "month")).toBe("2025년 1월");
+    expect(displayDate("2025-01-15", "day")).toBe("2025. 01. 15");
     expect(proposeNextRecurringDate("2025-01", "month", "monthly")).toBeNull();
   });
 
