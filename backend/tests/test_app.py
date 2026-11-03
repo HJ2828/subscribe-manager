@@ -135,3 +135,9 @@ def test_google_calendar_worker_rejects_missing_cron_secret() -> None:
     response = client.post("/api/v1/google-calendar/process")
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "invalid_cron_secret"
+
+
+def test_content_worker_rejects_missing_cron_secret() -> None:
+    response = client.post("/api/v1/content/process")
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "invalid_cron_secret"

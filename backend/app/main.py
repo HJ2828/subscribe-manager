@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, Request
@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.account_deletion import AccountDeletionService, get_account_deletion_service
 from app.config import Settings, get_settings
+from app.content_service import ContentService, get_content_service
 from app.errors import ApiError, api_error_handler
 from app.google_calendar_service import GoogleCalendarService, get_google_calendar_service
 from app.image_service import ImageService, get_image_service
@@ -124,6 +125,66 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     class GoogleDisconnectRequest(BaseModel):
         delete_events: bool
+
+    class CatalogRequest(BaseModel):
+        display_name: str
+        match_names: list[str] = []
+        news_support_status: str = "collecting"
+        cancellation_support_status: str = "collecting"
+
+    class CancellationGuideRequest(BaseModel):
+        catalog_id: UUID
+        payment_path: str
+        country_code: str = "KR"
+        plan_scope: str | None = None
+        title: str
+        steps: list[str]
+        conditions: str | None = None
+        access_after_cancel: str | None = None
+        source_title: str
+        source_url: str
+        source_domain: str
+        checked_at: str
+        status: Literal["draft", "pending_review"] = "pending_review"
+
+    class NewsRequest(BaseModel):
+        catalog_id: UUID
+        news_type: Literal["content", "feature", "limit", "price", "benefit", "ending", "other"]
+        title: str
+        summary: str
+        source_title: str
+        source_url: str
+        source_domain: str
+        announced_on: str | None = None
+        applies_on: str | None = None
+        country_codes: list[str] = []
+        plan_scopes: list[str] = []
+        conditions: str | None = None
+        impact_summary: str | None = None
+        applicability_status: Literal["confirmed", "needs_confirmation"] = "needs_confirmation"
+        checked_at: str
+        status: Literal["draft", "pending_review"] = "pending_review"
+
+    class ContentReviewRequest(BaseModel):
+        status: str
+        reason: str
+
+    class CollectionRunRequest(BaseModel):
+        catalog_id: UUID | None = None
+        content_kind: Literal["news", "cancellation"]
+        outcome: Literal[
+            "new_content",
+            "no_new_content",
+            "search_failed",
+            "source_failed",
+            "conditions_unconfirmed",
+            "budget_limited",
+        ]
+        details: str | None = None
+
+    class AnnouncementRequest(BaseModel):
+        title: str
+        body: str
 
     @app.get("/api/v1/push/config", tags=["notifications"])
     async def push_config(
@@ -254,6 +315,143 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 401, "invalid_cron_secret", "Google Calendar 동기화 실행 권한이 없습니다."
             )
         return await service.process_all()
+
+    @app.get("/api/v1/content/operator-status", tags=["content"])
+    async def content_operator_status(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, bool]:
+        return await service.operator_status(user)
+
+    @app.get("/api/v1/content/news", tags=["content"])
+    async def relevant_news(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> list[dict[str, object]]:
+        return await service.news_for_user(user)
+
+    @app.get("/api/v1/content/collection-status", tags=["content"])
+    async def collection_status(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.collection_status(user)
+
+    @app.get("/api/v1/content/scraps", tags=["content"])
+    async def news_scraps(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> list[dict[str, object]]:
+        return await service.scraps_for_user(user)
+
+    @app.post("/api/v1/content/news/{news_id}/scrap", tags=["content"])
+    async def add_news_scrap(
+        news_id: UUID,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.add_scrap(user, news_id)
+
+    @app.delete("/api/v1/content/news/{news_id}/scrap", tags=["content"])
+    async def remove_news_scrap(
+        news_id: UUID,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.remove_scrap(user, news_id)
+
+    @app.get("/api/v1/content/announcements", tags=["content"])
+    async def announcements(
+        _: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> list[dict[str, object]]:
+        return await service.announcements()
+
+    @app.post("/api/v1/content/process", tags=["content"])
+    async def process_content(
+        service: Annotated[ContentService, Depends(get_content_service)],
+        x_cron_secret: Annotated[str | None, Header()] = None,
+    ) -> dict[str, int]:
+        if (
+            not active_settings.content_collection_cron_secret
+            or x_cron_secret != active_settings.content_collection_cron_secret
+        ):
+            raise ApiError(401, "invalid_cron_secret", "자동 소식 수집 실행 권한이 없습니다.")
+        return await service.process_due_news()
+
+    @app.get("/api/v1/content/items/{item_id}", tags=["content"])
+    async def item_content(
+        item_id: UUID,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.item_content(user, item_id)
+
+    @app.get("/api/v1/operations/content", tags=["operations"])
+    async def content_review_data(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.review_data(user)
+
+    @app.post("/api/v1/operations/catalogs", tags=["operations"])
+    async def create_catalog(
+        body: CatalogRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.create_catalog(user, body.model_dump())
+
+    @app.post("/api/v1/operations/cancellation-guides", tags=["operations"])
+    async def create_cancellation_guide(
+        body: CancellationGuideRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.create_content(user, "cancellation_guide", body.model_dump())
+
+    @app.post("/api/v1/operations/news", tags=["operations"])
+    async def create_news(
+        body: NewsRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.create_content(user, "news", body.model_dump())
+
+    @app.post("/api/v1/operations/collection-runs", tags=["operations"])
+    async def create_collection_run(
+        body: CollectionRunRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.record_collection_run(user, body.model_dump())
+
+    @app.post("/api/v1/operations/announcements", tags=["operations"])
+    async def create_announcement(
+        body: AnnouncementRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.create_announcement(user, body.title, body.body)
+
+    @app.patch("/api/v1/operations/announcements/{announcement_id}", tags=["operations"])
+    async def review_announcement(
+        announcement_id: UUID,
+        body: ContentReviewRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.review_announcement(user, announcement_id, body.status, body.reason)
+
+    @app.patch("/api/v1/operations/{entity}/{entity_id}/review", tags=["operations"])
+    async def review_content(
+        entity: Literal["cancellation_guide", "news"],
+        entity_id: UUID,
+        body: ContentReviewRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.review(user, entity, entity_id, body.status, body.reason)
 
     return app
 

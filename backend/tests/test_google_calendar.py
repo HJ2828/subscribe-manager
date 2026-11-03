@@ -74,7 +74,7 @@ def test_google_event_is_all_day_and_carries_internal_identity() -> None:
 
 
 def test_unconfigured_status_does_not_attempt_external_storage() -> None:
-    service = GoogleCalendarService(Settings())
+    service = GoogleCalendarService(Settings(_env_file=None))
     result = asyncio.run(service.status(CurrentUser(UUID("11111111-1111-1111-1111-111111111111"))))
 
     assert result["configured"] is False

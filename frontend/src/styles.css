@@ -912,7 +912,7 @@ p {
     left: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     height: 80px;
     padding: 8px 10px max(8px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);

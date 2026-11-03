@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
+import { getAnnouncements, getCollectionStatus, getRelevantNews, type CollectionStatus, type OperatorAnnouncement, type ServiceNews } from "../lib/api";
 import { displayDate, typeLabel, type ManagedItem } from "../phase3/model";
 import {
   buildHomeSchedule,
@@ -89,6 +90,22 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
   const today = todayInTimeZone(timezone);
   const [calendarMonth, setCalendarMonth] = useState(() => today.slice(0, 7));
   const [selectedDate, setSelectedDate] = useState("");
+  const [news, setNews] = useState<ServiceNews[]>([]);
+  const [newsState, setNewsState] = useState<"loading" | "ready" | "error">("loading");
+  const [announcements, setAnnouncements] = useState<OperatorAnnouncement[]>([]);
+  const [collectionStatus, setCollectionStatus] = useState<CollectionStatus | null>(null);
+
+  useEffect(() => {
+    if (!session) return;
+    Promise.all([getRelevantNews(session.access_token), getCollectionStatus(session.access_token)])
+      .then(([rows, status]) => { const byService = new Map<string, ServiceNews>(); rows.forEach((row) => { const key = row.service_name || row.catalog_id; if (!byService.has(key)) byService.set(key, row); }); setNews([...byService.values()].slice(0, 3)); setCollectionStatus(status); setNewsState("ready"); })
+      .catch(() => setNewsState("error"));
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    getAnnouncements(session.access_token).then((rows) => setAnnouncements(rows.slice(0, 3))).catch(() => setAnnouncements([]));
+  }, [session]);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -156,6 +173,7 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
         </header>
 
         {error ? <div className="notice error" role="alert">{error}</div> : null}
+        {announcements.length ? <section className="home-announcements" aria-label="운영 공지사항"><h2>공지사항</h2>{announcements.map((entry) => <article key={entry.id}><div><strong>{entry.title}</strong><small>{entry.published_at?.slice(0, 10) || entry.created_at.slice(0, 10)}</small></div><p>{entry.body}</p></article>)}</section> : null}
         {!error ? (
           <>
             <section className="home-summary-grid" aria-label="다음 30일 요약">
@@ -285,8 +303,8 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
             </section>
 
             <section className="home-news-section">
-              <div className="home-card-header"><div><h2>내 구독의 최신 소식</h2><p>검증된 공식 소식만 연결할 예정이에요.</p></div></div>
-              <div className="home-card home-empty news-empty"><strong>최신 소식 기능은 아직 연결되지 않았어요.</strong><span>Phase 8에서 공식 출처·검수 기준과 함께 구현합니다.</span></div>
+              <div className="home-card-header"><div><h2>내 구독의 최신 소식</h2><p>검수된 공식 출처 중 내 서비스와 연결된 소식이에요.</p></div><Link to="/news" className="home-list-link">전체 소식 보기 →</Link></div>
+              {newsState === "loading" ? <div className="home-card home-empty news-empty">최신 소식을 불러오는 중…</div> : newsState === "error" ? <div className="home-card home-empty news-empty"><strong>소식을 불러오지 못했어요</strong><span>일정과 관리 데이터는 그대로 사용할 수 있어요.</span></div> : news.length ? <div className="home-news-grid">{news.map((entry) => <Link key={entry.id} to="/news" className="home-card home-news-card"><span>{entry.service_name}</span><strong>{entry.title}</strong><small>{entry.applicability_status === "needs_confirmation" ? "적용 조건 확인 필요" : `적용일 ${entry.applies_on || "확인 필요"}`}</small></Link>)}</div> : <div className="home-card home-empty news-empty"><strong>{collectionStatus?.status === "no_subscriptions" ? "수집할 반복 구독이 없어요" : collectionStatus?.status === "no_new_content" || collectionStatus?.status === "unchanged" ? "확인한 범위에서 새 소식이 없어요" : collectionStatus?.status === "precheck_failed" ? "공식 출처 확인에 실패했어요" : collectionStatus?.status === "search_failed" ? "소식 검색에 실패했어요" : collectionStatus?.status === "source_failed" ? "공식 원문을 확인하지 못했어요" : collectionStatus?.status === "budget_limited" ? "오늘 검색 예산에 도달했어요" : collectionStatus?.configured ? "첫 소식 수집을 기다리고 있어요" : "자동 소식 수집 설정이 필요해요"}</strong><span>{collectionStatus?.last_checked_at ? `마지막 확인 ${collectionStatus.last_checked_at.slice(0, 10)}` : "반복 구독 서비스별 공통 수집 결과를 여기에 표시합니다."}</span></div>}
             </section>
           </>
         ) : null}

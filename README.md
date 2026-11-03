@@ -51,6 +51,26 @@ Supabase 프로젝트 값이 없어도 상태 화면과 Backend 단위 테스트
 
 요청 권한은 앱이 만든 보조 캘린더와 일정만 관리하는 `calendar.app.created`입니다. 외부 공개 전 Google OAuth 검증 필요 여부와 테스트 모드 refresh token 제한은 실제 Google Cloud 프로젝트에서 확인해야 합니다.
 
+## Phase 8 운영 검수 설정
+
+1. `PHASE8_OPERATOR_USER_IDS`에 운영을 맡을 Supabase Auth 사용자 UUID를 쉼표로 구분해 설정합니다. 이메일이나 브라우저 값으로 운영 권한을 판단하지 않습니다.
+2. Phase 8 마이그레이션을 `20261103073000_phase8_collection_budget_scraps.sql`까지 적용한 뒤 Backend를 재시작합니다.
+3. 지정된 운영자는 설정의 `운영자 도구`에서 자동 수집 결과 중 불확실한 자료를 검토하고 전체 사용자 공지사항을 작성할 수 있습니다. 서비스 목록은 활성 반복 구독에서 자동으로 만들어집니다.
+4. HTTPS 원문 URL의 호스트와 입력한 출처 도메인이 일치하고 확인일·발표일 또는 적용일이 있어야 공개할 수 있습니다. 도메인이 일치한다는 사실만으로 공식성을 자동 확정하지 않으며 운영자가 원문을 직접 검수합니다.
+5. `CONTENT_COLLECTION_CRON_SECRET`을 임의의 긴 비밀값으로 설정하고 운영 스케줄러에서 `POST /api/v1/content/process`를 `X-Cron-Secret` 헤더와 함께 1~6시간마다 호출합니다. DB가 서비스별 72시간 간격·하루 5개 제한을 적용하므로 중복 호출이 유료 검색을 중복 실행하지 않습니다.
+6. 자동 수집은 활성 `반복 결제 구독` 서비스 이름만 공통 대상으로 사용합니다. 사용자별로 검색하지 않으며 메모·금액·개인 식별 정보는 검색 요청에 넣지 않습니다.
+7. 기본 모델은 `gpt-5.4-mini`, 제한은 하루 US$0.50·개발 누적 US$10·하루 서비스 작업 5개입니다. 기본 16,000 입력 토큰·2,000 출력 토큰·웹 검색 2회를 상한으로 예약하며, 실제 응답 토큰과 청구 검색 수로 정산합니다. 비용을 확인할 수 없는 실패는 무료로 보지 않고 예약액을 유지합니다.
+8. `service_collection_sources`에 공식 RSS·Atom·JSON·조건부 페이지를 등록한 서비스는 ETag·Last-Modified와 항목 해시를 먼저 확인합니다. 설정하지 않은 서비스만 제한된 LLM 웹 검색으로 바로 넘어갑니다.
+
+수동 시험 예시:
+
+```powershell
+$contentSecret = "CONTENT_COLLECTION_CRON_SECRET 값"
+curl.exe -X POST "http://localhost:8000/api/v1/content/process" -H "X-Cron-Secret: $contentSecret"
+```
+
+Responses API 웹 검색에서 실제로 인용된 HTTPS 원문만 저장합니다. 공식 출처로 구조화된 결과는 자동 공개하고, 공식성 또는 적용 조건이 불명확한 결과는 운영자 확인 대상으로 남깁니다. 구독 등록·홈/소식 진입·새로고침·더 보기·스크랩은 새 검색을 실행하지 않습니다.
+
 ## 검사
 
 - Frontend 타입 검사: `npm.cmd run check:frontend`

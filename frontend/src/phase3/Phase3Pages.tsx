@@ -20,6 +20,7 @@ import {
   retargetImageDraft,
   type ImageExtraction,
 } from "../phase4/imageDraft";
+import { ItemSupportContent } from "../phase8/Phase8Pages";
 import {
   CATEGORY_OPTIONS,
   TYPE_OPTIONS,
@@ -1532,17 +1533,6 @@ export function Phase3FormPage({
   );
 }
 
-function supportLabel(scope: SupportScope) {
-  return (
-    {
-      none: "지원 없음",
-      news: "소식 지원",
-      cancellation: "해지 안내 지원",
-      both: "소식·해지 지원",
-    } as const
-  )[scope];
-}
-
 export function Phase3DetailPage({
   navigation,
   itemId,
@@ -2109,14 +2099,7 @@ export function Phase3DetailPage({
                 이미지 관리·휴지통
               </Link>
             </section>
-            <section className="detail-card">
-              <h2>정보 지원</h2>
-              <p>{supportLabel(item.support_scope)}</p>
-              <p className="detail-muted">
-                소식과 공식 해지 안내는 검증된 데이터가 연결된 경우에만
-                표시해요.
-              </p>
-            </section>
+            <ItemSupportContent itemId={item.id} />
           </aside>
         </div>
       </main>

@@ -34,6 +34,21 @@ class Settings(BaseSettings):
     google_token_encryption_key: str | None = None
     google_calendar_cron_secret: str | None = None
     frontend_app_url: str = "http://localhost:5173"
+    phase8_operator_user_ids: str = ""
+    content_collection_model: str = "gpt-5.4-mini"
+    content_collection_cron_secret: str | None = None
+    content_daily_cost_limit_usd: float = 0.50
+    content_development_total_limit_usd: float = 10.0
+    content_estimated_cost_per_search_usd: float = 0.05
+    content_collection_interval_hours: int = 72
+    content_daily_service_job_limit: int = 5
+    content_max_input_tokens: int = 16_000
+    content_max_output_tokens: int = 2_000
+    content_max_web_search_calls: int = 2
+    content_model_input_cost_per_million_usd: float = 0.75
+    content_model_cached_input_cost_per_million_usd: float = 0.075
+    content_model_output_cost_per_million_usd: float = 4.50
+    content_web_search_cost_per_call_usd: float = 0.01
 
     @property
     def cors_origins(self) -> list[str]:
@@ -44,6 +59,14 @@ class Settings(BaseSettings):
         if not self.supabase_url:
             return None
         return self.supabase_url.rstrip("/")
+
+    @property
+    def phase8_operator_ids(self) -> set[str]:
+        return {
+            value.strip().lower()
+            for value in self.phase8_operator_user_ids.split(",")
+            if value.strip()
+        }
 
 
 @lru_cache

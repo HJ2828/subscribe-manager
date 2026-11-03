@@ -14,7 +14,7 @@ import statusAlertIcon from "./assets/figma/status-alert.svg";
 import warningIcon from "./assets/figma/warning.svg";
 import { useAuth } from "./auth/AuthContext";
 import { UnifiedHomePage } from "./home/HomePage";
-import { deleteAccount, getHealth } from "./lib/api";
+import { deleteAccount, getHealth, getOperatorStatus } from "./lib/api";
 import { publicConfig } from "./lib/config";
 import {
   Phase3DetailPage,
@@ -28,6 +28,7 @@ import { CalendarPage } from "./phase5/CalendarPage";
 import { NotificationsPage } from "./phase5/NotificationsPage";
 import { ReportPage } from "./phase6/ReportPage";
 import { GoogleCalendarSettings } from "./phase7/GoogleCalendarSettings";
+import { NewsPage, OperationsPage, ScrapsPage } from "./phase8/Phase8Pages";
 import "./styles.css";
 import "./page-layout.css";
 
@@ -790,10 +791,11 @@ const navItems = [
   ["전체 목록", navListIcon, "/items"],
   ["캘린더", navCalendarIcon, "/calendar"],
   ["리포트", navReportIcon, "/reports"],
+  ["스크랩", navListIcon, "/scraps"],
   ["설정", navSettingsIcon, "/settings"],
 ] as const;
 
-function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "reports" | "settings" | "notifications" }) {
+function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "reports" | "settings" | "notifications" | "news" | "scraps" | "operations" }) {
   const { client, session } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   useEffect(() => {
@@ -801,8 +803,9 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
     client.from("in_app_notifications").select("id", { count: "exact", head: true }).eq("user_id", session.user.id).is("read_at", null)
       .then(({ count }) => setUnreadCount(count || 0));
   }, [client, session]);
+
   const activeForLabel = (label: string) =>
-    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : "settings";
+    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : label === "스크랩" ? "scraps" : "settings";
   return (
     <>
       <header className="app-header">
@@ -1879,6 +1882,14 @@ function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  const [isOperator, setIsOperator] = useState(false);
+
+  useEffect(() => {
+    if (!session) return;
+    getOperatorStatus(session.access_token)
+      .then((result) => setIsOperator(result.is_operator))
+      .catch(() => setIsOperator(false));
+  }, [session]);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -2097,6 +2108,14 @@ function SettingsPage() {
           </section>
           <aside className="account-column">
             {session?.access_token ? <GoogleCalendarSettings accessToken={session.access_token} /> : null}
+            {isOperator ? (
+              <section className="settings-card">
+                <h2>운영자 도구</h2>
+                <p>자동 수집 결과 중 확인이 필요한 소식을 검토하거나 전체 사용자 공지사항을 작성해요.</p>
+                <AppLink to="/operations#announcements" className="button primary full">공지사항 작성</AppLink>
+                <AppLink to="/operations" className="button secondary full">소식 검토 열기</AppLink>
+              </section>
+            ) : null}
             <section className="settings-card account-card">
               <h2>계정</h2>
               <Field id="account-email" label="이메일 · 읽기 전용">
@@ -2317,6 +2336,24 @@ export default function App() {
     return (
       <Protected>
         <ReportPage navigation={<AppNavigation active="reports" />} />
+      </Protected>
+    );
+  if (path === "/news")
+    return (
+      <Protected>
+        <NewsPage navigation={<AppNavigation active="news" />} />
+      </Protected>
+    );
+  if (path === "/scraps")
+    return (
+      <Protected>
+        <ScrapsPage navigation={<AppNavigation active="scraps" />} />
+      </Protected>
+    );
+  if (path === "/operations")
+    return (
+      <Protected>
+        <OperationsPage navigation={<AppNavigation active="operations" />} />
       </Protected>
     );
   if (path === "/settings")
