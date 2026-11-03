@@ -27,6 +27,7 @@ import {
 import { CalendarPage } from "./phase5/CalendarPage";
 import { NotificationsPage } from "./phase5/NotificationsPage";
 import { ReportPage } from "./phase6/ReportPage";
+import { GoogleCalendarSettings } from "./phase7/GoogleCalendarSettings";
 import "./styles.css";
 import "./page-layout.css";
 
@@ -2095,6 +2096,7 @@ function SettingsPage() {
             </button>
           </section>
           <aside className="account-column">
+            {session?.access_token ? <GoogleCalendarSettings accessToken={session.access_token} /> : null}
             <section className="settings-card account-card">
               <h2>계정</h2>
               <Field id="account-email" label="이메일 · 읽기 전용">

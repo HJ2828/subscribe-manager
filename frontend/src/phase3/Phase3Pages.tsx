@@ -11,6 +11,8 @@ import {
   analyzeImage,
   changeImageLifecycle,
   confirmImage,
+  getGoogleCalendarStatus,
+  syncGoogleCalendar,
 } from "../lib/api";
 import {
   applyImageExtraction,
@@ -1720,6 +1722,8 @@ export function Phase3DetailPage({
     const imagesToTrash = (linkedImages.data || []).filter(
       (image) => image.lifecycle_status !== "trash",
     );
+    const googleStatus = await getGoogleCalendarStatus(session.access_token).catch(() => null);
+    const googleCleanupExpected = googleStatus?.status === "connected" || googleStatus?.status === "sync_delayed";
     const job = await client
       .from("item_deletion_jobs")
       .insert({
@@ -1729,7 +1733,7 @@ export function Phase3DetailPage({
         management_type: item.management_type,
         internal_status: "pending",
         image_cleanup_status: imagesToTrash.length ? "pending" : "not_applicable",
-        calendar_cleanup_status: "not_applicable",
+        calendar_cleanup_status: googleCleanupExpected ? "pending" : "not_applicable",
         relationship_cleanup_status: relationships.length ? "pending" : "not_applicable",
       })
       .select()
@@ -1774,6 +1778,9 @@ export function Phase3DetailPage({
     const imageCleanupFailed = imageMoves.some(
       (entry) => entry.status === "rejected",
     );
+    const googleCleanupFailed = googleCleanupExpected
+      ? await syncGoogleCalendar(session.access_token).then((sync) => sync.failed > 0).catch(() => true)
+      : false;
     const finalized = await client
       .from("item_deletion_jobs")
       .update({
@@ -1784,7 +1791,12 @@ export function Phase3DetailPage({
             ? "failed"
             : "completed"
           : "not_applicable",
-        last_error: imageCleanupFailed ? "image_trash_failed" : null,
+        calendar_cleanup_status: googleCleanupExpected
+          ? googleCleanupFailed ? "failed" : "completed"
+          : "not_applicable",
+        last_error: imageCleanupFailed
+          ? "image_trash_failed"
+          : googleCleanupFailed ? "google_calendar_cleanup_failed" : null,
       })
       .eq("id", job.data.id)
       .eq("user_id", session.user.id);
@@ -1792,8 +1804,12 @@ export function Phase3DetailPage({
       "phase3-delete-result",
       finalized.error
         ? "항목 삭제 완료 · 삭제 상태 기록 갱신 실패"
-        : imageCleanupFailed
-          ? "항목 삭제 완료 · 일부 이미지는 휴지통 이동 실패"
+        : imageCleanupFailed || googleCleanupFailed
+          ? imageCleanupFailed && googleCleanupFailed
+            ? "항목 삭제 완료 · 이미지 및 Google 일정 정리 실패"
+            : googleCleanupFailed
+              ? "항목 삭제 완료 · Google 일정 정리 실패"
+              : "항목 삭제 완료 · 일부 이미지는 휴지통 이동 실패"
           : imagesToTrash.length
             ? "항목 삭제 완료 · 연결 이미지를 휴지통으로 이동"
             : "항목 삭제 완료 · 연결된 이미지 없음",

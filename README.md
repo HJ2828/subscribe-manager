@@ -40,6 +40,17 @@ Supabase 프로젝트 값이 없어도 상태 화면과 Backend 단위 테스트
 3. 운영 스케줄러에서 `POST /api/v1/notifications/process`를 주기적으로 호출하고 `X-Cron-Secret` 헤더에 Backend의 `NOTIFICATION_CRON_SECRET`과 같은 값을 전달합니다.
 4. Web Push는 운영 HTTPS, 브라우저 권한과 일부 모바일 환경의 PWA 설치 조건이 필요합니다. 설정 전이나 미지원 환경에서도 앱 안 알림은 유지됩니다.
 
+## Phase 7 Google Calendar 설정
+
+1. Google Cloud 프로젝트에서 Google Calendar API를 사용 설정하고 OAuth 동의 화면을 구성합니다. 개발 중에는 테스트 사용자를 등록합니다.
+2. 웹 애플리케이션 OAuth 클라이언트를 만들고 승인된 redirect URI에 `.env`의 `GOOGLE_OAUTH_REDIRECT_URI`와 정확히 같은 주소를 등록합니다. 로컬 기본값은 `http://localhost:8000/api/v1/google-calendar/callback`입니다.
+3. 클라이언트 ID와 비밀키는 Backend 전용 `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`에 넣습니다. `VITE_*` 변수에는 넣지 않습니다.
+4. `GOOGLE_TOKEN_ENCRYPTION_KEY`에는 Fernet 키를 설정합니다. 기존 연결 토큰을 복호화해야 하므로 운영 중 임의로 교체하지 않습니다.
+5. `FRONTEND_APP_URL`은 OAuth 완료 후 돌아올 프론트엔드 주소로 설정합니다. 운영 환경은 HTTPS 주소를 사용합니다.
+6. 운영 스케줄러에서 `POST /api/v1/google-calendar/process`를 주기적으로 호출하고 `X-Cron-Secret`에 `GOOGLE_CALENDAR_CRON_SECRET`을 전달합니다. 내부 캘린더는 외부 동기화 실패와 무관하게 유지됩니다.
+
+요청 권한은 앱이 만든 보조 캘린더와 일정만 관리하는 `calendar.app.created`입니다. 외부 공개 전 Google OAuth 검증 필요 여부와 테스트 모드 refresh token 제한은 실제 Google Cloud 프로젝트에서 확인해야 합니다.
+
 ## 검사
 
 - Frontend 타입 검사: `npm.cmd run check:frontend`

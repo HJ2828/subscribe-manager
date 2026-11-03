@@ -3,11 +3,13 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from app.account_deletion import AccountDeletionService, get_account_deletion_service
 from app.config import Settings, get_settings
 from app.errors import ApiError, api_error_handler
+from app.google_calendar_service import GoogleCalendarService, get_google_calendar_service
 from app.image_service import ImageService, get_image_service
 from app.notification_service import NotificationService, get_notification_service
 from app.security import CurrentUser, require_current_user
@@ -37,7 +39,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def delete_account(
         user: Annotated[CurrentUser, Depends(require_current_user)],
         deletion_service: Annotated[AccountDeletionService, Depends(get_account_deletion_service)],
+        google_service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
     ) -> dict[str, str]:
+        try:
+            await google_service.disconnect(user, delete_events=True)
+        except ApiError:
+            # Google cleanup is best-effort and must not restore or block internal account deletion.
+            pass
         result = await deletion_service.delete(user.id)
         return {"status": result.status, "request_id": str(result.request_id)}
 
@@ -111,6 +119,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     class PushUnsubscribeRequest(BaseModel):
         endpoint: str
 
+    class GoogleEventTypesRequest(BaseModel):
+        event_types: list[str]
+
+    class GoogleDisconnectRequest(BaseModel):
+        delete_events: bool
+
     @app.get("/api/v1/push/config", tags=["notifications"])
     async def push_config(
         _: Annotated[CurrentUser, Depends(require_current_user)],
@@ -160,6 +174,86 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "skipped": result.skipped,
             "delayed": result.delayed,
         }
+
+    @app.get("/api/v1/google-calendar/status", tags=["google-calendar"])
+    async def google_calendar_status(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+    ) -> dict[str, object]:
+        return await service.status(user)
+
+    @app.post("/api/v1/google-calendar/connect", tags=["google-calendar"])
+    async def google_calendar_connect(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+    ) -> dict[str, str]:
+        return {"authorization_url": await service.authorization_url(user)}
+
+    @app.get("/api/v1/google-calendar/callback", tags=["google-calendar"])
+    async def google_calendar_callback(
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+        code: str | None = None,
+        state: str | None = None,
+        error: str | None = None,
+    ) -> RedirectResponse:
+        frontend = active_settings.frontend_app_url.rstrip("/")
+        if error or not code or not state:
+            return RedirectResponse(f"{frontend}/settings?google_calendar=denied", status_code=303)
+        try:
+            await service.complete_oauth(code, state)
+        except ApiError:
+            return RedirectResponse(f"{frontend}/settings?google_calendar=failed", status_code=303)
+        return RedirectResponse(f"{frontend}/settings?google_calendar=connected", status_code=303)
+
+    @app.post("/api/v1/google-calendar/sync", tags=["google-calendar"])
+    async def google_calendar_sync(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+    ) -> dict[str, int]:
+        result = await service.sync_user(user.id)
+        return {
+            "created": result.created,
+            "updated": result.updated,
+            "deleted": result.deleted,
+            "failed": result.failed,
+        }
+
+    @app.patch("/api/v1/google-calendar/event-types", tags=["google-calendar"])
+    async def google_calendar_event_types(
+        body: GoogleEventTypesRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+    ) -> dict[str, int]:
+        result = await service.update_event_types(user, body.event_types)
+        return {
+            "created": result.created,
+            "updated": result.updated,
+            "deleted": result.deleted,
+            "failed": result.failed,
+        }
+
+    @app.post("/api/v1/google-calendar/disconnect", tags=["google-calendar"])
+    async def google_calendar_disconnect(
+        body: GoogleDisconnectRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+    ) -> dict[str, int | str]:
+        result = await service.disconnect(user, body.delete_events)
+        return {"status": "disconnected", "deleted": result.deleted, "failed": result.failed}
+
+    @app.post("/api/v1/google-calendar/process", tags=["google-calendar"])
+    async def google_calendar_process(
+        service: Annotated[GoogleCalendarService, Depends(get_google_calendar_service)],
+        x_cron_secret: Annotated[str | None, Header()] = None,
+    ) -> dict[str, int]:
+        if (
+            not active_settings.google_calendar_cron_secret
+            or x_cron_secret != active_settings.google_calendar_cron_secret
+        ):
+            raise ApiError(
+                401, "invalid_cron_secret", "Google Calendar 동기화 실행 권한이 없습니다."
+            )
+        return await service.process_all()
 
     return app
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { addDays, todayInTimeZone } from "../home/homeModel";
+import { getGoogleCalendarStatus, type GoogleCalendarStatus } from "../lib/api";
 import { typeLabel, type ManagedItem } from "../phase3/model";
 import {
   CALENDAR_KIND_LABELS,
@@ -54,6 +55,7 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
   const [kinds, setKinds] = useState<Set<CalendarEventKind>>(() => new Set(KINDS));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -75,6 +77,11 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
     });
     return () => { active = false; };
   }, [client, session]);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    getGoogleCalendarStatus(session.access_token).then(setGoogleStatus).catch(() => setGoogleStatus(null));
+  }, [session?.access_token]);
 
   const month = anchor.slice(0, 7);
   const gridDates = monthGrid(month);
@@ -110,7 +117,7 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
       <main className="calendar-page">
         <header className="phase5-heading">
           <div><span>MY SCHEDULE</span><h1>캘린더</h1><p>{timezone} 기준으로 확인된 일정만 표시해요.</p></div>
-          <button className="button secondary" type="button" onClick={() => { const today = todayInTimeZone(timezone); setAnchor(today); setSelectedDate(today); }}>오늘</button>
+          <div className="calendar-heading-actions"><button className="google-calendar-link" type="button" onClick={() => navigate("/settings")}>Google Calendar · {googleStatus?.status === "connected" ? "연결됨" : googleStatus?.status === "sync_delayed" ? "동기화 지연" : googleStatus?.status === "reauth_required" ? "재연결 필요" : "연결 설정"}</button><button className="button secondary" type="button" onClick={() => { const today = todayInTimeZone(timezone); setAnchor(today); setSelectedDate(today); }}>오늘</button></div>
         </header>
 
         <section className="calendar-toolbar" aria-label="캘린더 보기와 필터">

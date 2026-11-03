@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:admin@example.invalid"
     notification_cron_secret: str | None = None
     notification_max_attempts: int = 3
+    google_oauth_client_id: str | None = None
+    google_oauth_client_secret: str | None = None
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/google-calendar/callback"
+    google_token_encryption_key: str | None = None
+    google_calendar_cron_secret: str | None = None
+    frontend_app_url: str = "http://localhost:5173"
 
     @property
     def cors_origins(self) -> list[str]:
