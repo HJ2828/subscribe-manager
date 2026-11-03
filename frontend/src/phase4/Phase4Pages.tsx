@@ -610,7 +610,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                     <button
                       type="button"
                       className="button danger"
-                      disabled={Boolean(busyId)}
+                      disabled={busyId === asset.id}
                       onClick={() => changeState(asset, "retry")}
                     >
                       삭제 재시도
@@ -620,7 +620,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                       <button
                         type="button"
                         className="button secondary"
-                        disabled={Boolean(busyId)}
+                        disabled={busyId === asset.id}
                         onClick={() => changeState(asset, "restore")}
                       >
                         복원
@@ -628,7 +628,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                       <button
                         type="button"
                         className="button danger"
-                        disabled={Boolean(busyId)}
+                        disabled={busyId === asset.id}
                         onClick={() => changeState(asset, "delete")}
                       >
                         영구 삭제
@@ -638,7 +638,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                     <button
                       type="button"
                       className="button secondary"
-                      disabled={Boolean(busyId)}
+                      disabled={busyId === asset.id}
                       onClick={() => changeState(asset, "trash")}
                     >
                       휴지통으로

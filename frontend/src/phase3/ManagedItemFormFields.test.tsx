@@ -24,6 +24,7 @@ describe("shared managed item form", () => {
     expect(screen.getByRole("option", { name: "카카오페이" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "네이버페이" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "카드사" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "계좌 이체" })).toBeInTheDocument();
     expect(document.querySelector('datalist option[value="영상·콘텐츠·OTT"]')).toBeInTheDocument();
     expect(document.querySelector('datalist option[value="건강·운동"]')).toBeInTheDocument();
     expect(document.querySelector('datalist option[value="라이프·기록"]')).toBeInTheDocument();
@@ -35,6 +36,43 @@ describe("shared managed item form", () => {
     expect(categories).not.toContain("생산성");
     expect(categories.at(-1)).toBe("기타");
     expect(document.querySelectorAll(".required-mark").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("renders other payment deadlines like recurring payments without a plan field", () => {
+    render(
+      <ManagedItemFormFields
+        draft={createEmptyDraft("other_payment_deadline")}
+        update={vi.fn()}
+        changeType={vi.fn()}
+        errors={{}}
+        actions={<button type="submit">저장</button>}
+      />,
+    );
+
+    expect(screen.getByLabelText(/^결제 이름/)).toBeRequired();
+    expect(screen.queryByLabelText("요금제")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("결제 주기")).toHaveValue("monthly");
+    expect(screen.getByLabelText("결제 경로")).toBeInTheDocument();
+    expect(screen.getByLabelText("최초 결제일 정밀도")).toBeInTheDocument();
+    expect(screen.getByLabelText("확인한 다음 결제일 정밀도")).toBeInTheDocument();
+    const types = screen.getByLabelText(/^유형/).querySelectorAll("option");
+    expect(Array.from(types).slice(-2).map((option) => option.textContent)).toEqual([
+      "기타 결제 기한",
+      "기타 기한",
+    ]);
+  });
+
+  it("shows a provider field for points", () => {
+    render(
+      <ManagedItemFormFields
+        draft={createEmptyDraft("points")}
+        update={vi.fn()}
+        changeType={vi.fn()}
+        errors={{}}
+        actions={<button type="submit">저장</button>}
+      />,
+    );
+    expect(screen.getByLabelText("사용처")).toBeInTheDocument();
   });
 
   it("renders the complete gifticon form and marks only image-filled fields", () => {

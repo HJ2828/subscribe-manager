@@ -19,6 +19,7 @@ import {
   type ImageExtraction,
 } from "../phase4/imageDraft";
 import {
+  CATEGORY_OPTIONS,
   TYPE_OPTIONS,
   buildManagedItemPayload,
   canMarkUsed,
@@ -27,6 +28,7 @@ import {
   displayDate,
   itemStatusValue,
   isMoneyType,
+  isPaymentScheduleType,
   proposeNextRecurringDate,
   targetSortValue,
   typeLabel,
@@ -164,7 +166,7 @@ function formatAmount(item: ManagedItem) {
 }
 
 function statusLabel(item: ManagedItem) {
-  if (item.management_type === "recurring_subscription") {
+  if (isPaymentScheduleType(item.management_type)) {
     return (
       {
         in_use: "이용 중",
@@ -254,7 +256,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
         const expiredIds = loaded
           .filter(
             (item) =>
-              item.management_type !== "recurring_subscription" &&
+              !isPaymentScheduleType(item.management_type) &&
               item.lifecycle_status !== "expired" &&
               itemStatusValue(item) === "expired",
           )
@@ -281,17 +283,6 @@ export function Phase3ListPage({ navigation }: PageProps) {
     };
   }, [client, session]);
 
-  const categories = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          items
-            .map((item) => item.category)
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ).sort((a, b) => a.localeCompare(b, "ko")),
-    [items],
-  );
   const filtered = useMemo(
     () =>
       items
@@ -375,7 +366,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
                 onChange={(event) => setCategory(event.target.value)}
               >
                 <option value="all">카테고리 전체</option>
-                {categories.map((value) => (
+                {CATEGORY_OPTIONS.map((value) => (
                   <option key={value}>{value}</option>
                 ))}
               </select>
@@ -583,11 +574,12 @@ function TypeSpecificFields({
   imageFilledFields?: ReadonlySet<keyof ManagedItemDraft>;
 }) {
   const recurring = draft.management_type === "recurring_subscription";
+  const paymentSchedule = isPaymentScheduleType(draft.management_type);
   const fixed = draft.management_type === "fixed_term_membership";
   const consumable = canMarkUsed(draft.management_type);
   const points = draft.management_type === "points";
   const warranty = draft.management_type === "warranty";
-  const proposed = recurring
+  const proposed = paymentSchedule
     ? proposeNextRecurringDate(
         draft.start_date_value,
         draft.start_date_precision,
@@ -608,14 +600,14 @@ function TypeSpecificFields({
             />
           </Field>
         ) : null}
-        {consumable || warranty ? (
+        {consumable || points || warranty ? (
           <Field
             id="item-provider"
             imageFilled={imageFilled("provider_name")}
             label={
               warranty
                 ? "보장 서비스명"
-                : consumable
+                : consumable || points
                   ? "사용처"
                   : "서비스명 보조 정보"
             }
@@ -713,7 +705,7 @@ function TypeSpecificFields({
             </Field>
           </>
         ) : null}
-        {recurring ? (
+        {paymentSchedule ? (
           <Field id="item-cycle" label="결제 주기" imageFilled={imageFilled("billing_cycle")}>
             <select
               id="item-cycle"
@@ -733,7 +725,7 @@ function TypeSpecificFields({
             </select>
           </Field>
         ) : null}
-        {recurring ? (
+        {paymentSchedule ? (
           <Field id="item-payment" label="결제 경로" imageFilled={imageFilled("payment_method")}>
             <select
               id="item-payment"
@@ -750,15 +742,22 @@ function TypeSpecificFields({
               <option value="kakaopay">카카오페이</option>
               <option value="naverpay">네이버페이</option>
               <option value="card_company">카드사</option>
+              <option value="bank_transfer">계좌 이체</option>
               <option value="other">기타</option>
             </select>
           </Field>
         ) : null}
       </div>
-      {recurring || fixed || warranty ? (
+      {paymentSchedule || fixed || warranty ? (
         <DateField
           prefix="item-start"
-          label={recurring ? "최초 가입일" : "시작일"}
+          label={
+            draft.management_type === "other_payment_deadline"
+              ? "최초 결제일"
+              : paymentSchedule
+                ? "최초 가입일"
+                : "시작일"
+          }
           value={draft.start_date_value}
           precision={draft.start_date_precision}
           onValue={(value) => update("start_date_value", value)}
@@ -771,7 +770,7 @@ function TypeSpecificFields({
       <DateField
         prefix="item-target"
         label={
-          recurring
+          paymentSchedule
             ? "확인한 다음 결제일"
             : fixed
               ? "갱신일·종료일"
@@ -791,7 +790,7 @@ function TypeSpecificFields({
         imageFilled={imageFilled("target_date_value", "target_date_precision")}
         hint="날짜가 없어도 저장할 수 있고, 연·월에는 D-day를 만들지 않아요."
       />
-      {recurring ? (
+      {paymentSchedule ? (
         <div className="proposal-panel">
           <strong>예상 날짜 · 제안값</strong>
           <p>
@@ -843,7 +842,7 @@ function TypeSpecificFields({
             <option value="needs_review">확인 필요</option>
           </select>
         </Field>
-      ) : !recurring && !fixed ? (
+      ) : !paymentSchedule && !fixed ? (
         <Field id="item-lifecycle" label="상태" imageFilled={imageFilled("lifecycle_status")}>
           <select
             id="item-lifecycle"
@@ -859,7 +858,7 @@ function TypeSpecificFields({
           </select>
         </Field>
       ) : null}
-      {recurring || fixed ? (
+      {paymentSchedule || fixed ? (
         <div className="form-grid">
           <Field id="item-actual" label="실제 이용 상태" imageFilled={imageFilled("actual_status")}>
             <select
@@ -972,6 +971,8 @@ export function ManagedItemFormFields({
           label={
             draft.management_type === "warranty"
               ? "제품명"
+              : draft.management_type === "other_payment_deadline"
+                ? "결제 이름"
               : draft.management_type === "recurring_subscription" ||
                   draft.management_type === "fixed_term_membership" ||
                   draft.management_type === "points"
@@ -1013,37 +1014,40 @@ export function ManagedItemFormFields({
               placeholder="직접 입력 또는 선택"
             />
             <datalist id="category-options">
-              <option value="영상·콘텐츠·OTT" />
-              <option value="AI·생산성" />
-              <option value="디자인·소프트웨어" />
-              <option value="음악·오디오" />
-              <option value="독서·교육" />
-              <option value="게임" />
-              <option value="쇼핑·배달" />
-              <option value="식품·카페·외식" />
-              <option value="정기배송" />
-              <option value="가전·생활관리" />
-              <option value="통신·클라우드" />
-              <option value="건강·운동" />
-              <option value="라이프·기록" />
-              <option value="기타" />
+              {CATEGORY_OPTIONS.map((value) => (
+                <option value={value} key={value} />
+              ))}
             </datalist>
           </Field>
           <Field id="item-reminder" label="알림">
             <select
               id="item-reminder"
-              value={draft.target_date_value ? "default" : "none"}
+              value={draft.reminder_days_before.join(",") || "none"}
               disabled={!draft.target_date_value}
               onChange={(event) =>
                 update(
                   "reminder_days_before",
-                  event.target.value === "default" ? [3, 0] : [],
+                  event.target.value === "none"
+                    ? []
+                    : event.target.value.split(",").map(Number),
                 )
               }
             >
               <option value="none">알림 없음</option>
-              <option value="default">3일 전·당일</option>
+              <option value="0">당일</option>
+              <option value="1,0">1일 전·당일</option>
+              <option value="3,0">3일 전·당일</option>
+              <option value="7,3,0">7일 전·3일 전·당일</option>
             </select>
+          </Field>
+          <Field id="item-reminder-time" label="알림 시각">
+            <input
+              id="item-reminder-time"
+              type="time"
+              value={draft.reminder_time || "09:00"}
+              disabled={!draft.target_date_value || draft.reminder_days_before.length === 0}
+              onChange={(event) => update("reminder_time", event.target.value)}
+            />
           </Field>
         </div>
         <Field
@@ -1784,7 +1788,7 @@ export function Phase3DetailPage({
       </div>
     );
   const recurring =
-    item.management_type === "recurring_subscription" ||
+    isPaymentScheduleType(item.management_type) ||
     item.management_type === "fixed_term_membership";
   const target = item.target_date_value || item.next_billing_date;
   const targetPrecision =

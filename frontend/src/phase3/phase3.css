@@ -25,6 +25,10 @@
   background: var(--primary-soft);
 }
 
+.detail-page > .notice {
+  margin-bottom: 22px;
+}
+
 .loading-screen {
   min-height: 100vh;
   display: grid;

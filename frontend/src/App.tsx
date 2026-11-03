@@ -13,6 +13,7 @@ import notificationIcon from "./assets/figma/notification.svg";
 import statusAlertIcon from "./assets/figma/status-alert.svg";
 import warningIcon from "./assets/figma/warning.svg";
 import { useAuth } from "./auth/AuthContext";
+import { UnifiedHomePage } from "./home/HomePage";
 import { deleteAccount, getHealth } from "./lib/api";
 import { publicConfig } from "./lib/config";
 import {
@@ -23,6 +24,8 @@ import {
 import {
   Phase4ImageLibraryPage,
 } from "./phase4/Phase4Pages";
+import { CalendarPage } from "./phase5/CalendarPage";
+import { NotificationsPage } from "./phase5/NotificationsPage";
 import "./styles.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -782,14 +785,21 @@ function AuthCallbackPage() {
 const navItems = [
   ["홈", navHomeIcon, "/"],
   ["전체 목록", navListIcon, "/items"],
-  ["캘린더", navCalendarIcon, ""],
+  ["캘린더", navCalendarIcon, "/calendar"],
   ["리포트", navReportIcon, ""],
   ["설정", navSettingsIcon, "/settings"],
 ] as const;
 
-function AppNavigation({ active }: { active: "home" | "items" | "settings" }) {
+function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "settings" | "notifications" }) {
+  const { client, session } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+  useEffect(() => {
+    if (!client || !session || typeof client.from !== "function") return;
+    client.from("in_app_notifications").select("id", { count: "exact", head: true }).eq("user_id", session.user.id).is("read_at", null)
+      .then(({ count }) => setUnreadCount(count || 0));
+  }, [client, session]);
   const activeForLabel = (label: string) =>
-    label === "홈" ? "home" : label === "전체 목록" ? "items" : "settings";
+    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : "settings";
   return (
     <>
       <header className="app-header">
@@ -815,14 +825,14 @@ function AppNavigation({ active }: { active: "home" | "items" | "settings" }) {
             ),
           )}
         </nav>
-        <button
-          className="notification-button"
-          type="button"
+        <AppLink
+          to="/notifications"
+          className={`notification-button${active === "notifications" ? " active" : ""}`}
           aria-label="알림"
-          disabled
         >
           <img src={notificationIcon} alt="" />
-        </button>
+          {unreadCount ? <span className="notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+        </AppLink>
       </header>
       <nav className="bottom-nav" aria-label="모바일 주요 메뉴">
         {navItems.map(([label, icon, path]) =>
@@ -2287,6 +2297,18 @@ export default function App() {
         <Phase3ListPage navigation={<AppNavigation active="items" />} />
       </Protected>
     );
+  if (path === "/calendar")
+    return (
+      <Protected>
+        <CalendarPage navigation={<AppNavigation active="calendar" />} />
+      </Protected>
+    );
+  if (path === "/notifications")
+    return (
+      <Protected>
+        <NotificationsPage navigation={<AppNavigation active="notifications" />} />
+      </Protected>
+    );
   if (path === "/settings")
     return (
       <Protected>
@@ -2301,7 +2323,7 @@ export default function App() {
     );
   return (
     <Protected>
-      <HomePage />
+      <UnifiedHomePage navigation={<AppNavigation active="home" />} />
     </Protected>
   );
 }

@@ -1,5 +1,6 @@
 export type ManagementType =
   | "recurring_subscription"
+  | "other_payment_deadline"
   | "fixed_term_membership"
   | "gifticon"
   | "coupon"
@@ -89,12 +90,44 @@ export const TYPE_OPTIONS: Array<{
     label: "제품 보증·보장 서비스",
     shortLabel: "제품 보증",
   },
+  {
+    value: "other_payment_deadline",
+    label: "기타 결제 기한",
+    shortLabel: "기타 결제 기한",
+  },
   { value: "other_deadline", label: "기타 기한", shortLabel: "기타 기한" },
 ];
+
+export const CATEGORY_OPTIONS = [
+  "영상·콘텐츠·OTT",
+  "AI·생산성",
+  "디자인·소프트웨어",
+  "음악·오디오",
+  "독서·교육",
+  "게임",
+  "쇼핑·배달",
+  "식품·카페·외식",
+  "정기배송",
+  "가전·생활관리",
+  "통신·클라우드",
+  "건강·운동",
+  "라이프·기록",
+  "기타",
+] as const;
 
 export function typeLabel(value: ManagementType, short = false) {
   const option = TYPE_OPTIONS.find((candidate) => candidate.value === value);
   return (short ? option?.shortLabel : option?.label) || "관리 항목";
+}
+
+export function isPaymentScheduleType(type: ManagementType) {
+  return type === "recurring_subscription" || type === "other_payment_deadline";
+}
+
+function defaultLifecycleStatus(type: ManagementType): LifecycleStatus {
+  return type === "gifticon" || type === "coupon" || type === "voucher"
+    ? "unused"
+    : "active";
 }
 
 export function createEmptyDraft(
@@ -108,7 +141,7 @@ export function createEmptyDraft(
     amount: null,
     currency: isMoneyType(type) ? "KRW" : null,
     unit_name: type === "points" ? "P" : null,
-    billing_cycle: type === "recurring_subscription" ? "monthly" : null,
+    billing_cycle: isPaymentScheduleType(type) ? "monthly" : null,
     start_date_value: null,
     start_date_precision: "day",
     target_date_value: null,
@@ -116,17 +149,14 @@ export function createEmptyDraft(
     first_billing_date: null,
     next_billing_date: null,
     conditions: "",
-    lifecycle_status:
-      type === "gifticon" || type === "coupon" || type === "voucher"
-        ? "unused"
-        : "active",
+    lifecycle_status: defaultLifecycleStatus(type),
     actual_status: "in_use",
     auto_renewal_status:
-      type === "recurring_subscription" || type === "fixed_term_membership"
+      isPaymentScheduleType(type) || type === "fixed_term_membership"
         ? "on"
         : "needs_review",
     usage_plan:
-      type === "recurring_subscription" ? "scheduled" : "needs_review",
+      isPaymentScheduleType(type) ? "scheduled" : "needs_review",
     payment_method: "",
     category: "",
     memo: "",
@@ -251,7 +281,7 @@ export function itemStatusValue(
   >,
   now = new Date(),
 ) {
-  if (item.management_type === "recurring_subscription") return item.actual_status;
+  if (isPaymentScheduleType(item.management_type)) return item.actual_status;
   return isTargetDateExpired(
     item.target_date_value,
     item.target_date_precision,
@@ -264,7 +294,7 @@ export function itemStatusValue(
 export function validateManagedItemDraft(draft: ManagedItemDraft) {
   const errors: Record<string, string> = {};
   if (!draft.service_name.trim())
-    errors.service_name = `${draft.management_type === "warranty" ? "제품명" : draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership" || draft.management_type === "points" ? "서비스명" : "이름"}을 확인해 주세요.`;
+    errors.service_name = `${draft.management_type === "warranty" ? "제품명" : draft.management_type === "other_payment_deadline" ? "결제 이름" : draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership" || draft.management_type === "points" ? "서비스명" : "이름"}을 확인해 주세요.`;
   if (
     draft.amount !== null &&
     (!Number.isFinite(draft.amount) || draft.amount < 0)
@@ -316,17 +346,20 @@ export function buildManagedItemPayload(
     category: draft.category?.trim() || null,
     memo: draft.memo?.trim() || null,
     lifecycle_status:
-      draft.management_type !== "recurring_subscription" &&
+      !isPaymentScheduleType(draft.management_type) &&
       isTargetDateExpired(draft.target_date_value, draft.target_date_precision)
         ? "expired"
-        : draft.lifecycle_status,
+        : !isPaymentScheduleType(draft.management_type) &&
+            draft.lifecycle_status === "expired"
+          ? defaultLifecycleStatus(draft.management_type)
+          : draft.lifecycle_status,
     reminder_days_before: draft.target_date_value
       ? draft.reminder_days_before
       : [],
     first_billing_date:
-      draft.management_type === "recurring_subscription" ? exactStart : null,
+      isPaymentScheduleType(draft.management_type) ? exactStart : null,
     next_billing_date:
-      draft.management_type === "recurring_subscription" ? exactTarget : null,
+      isPaymentScheduleType(draft.management_type) ? exactTarget : null,
     user_id: userId,
   };
 }

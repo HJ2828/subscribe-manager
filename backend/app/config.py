@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     openai_daily_analysis_limit: int = 10
     openai_daily_cost_limit_usd: float = 0.20
     openai_estimated_cost_per_analysis_usd: float = 0.02
+    vapid_public_key: str | None = None
+    vapid_private_key: str | None = None
+    vapid_subject: str = "mailto:admin@example.invalid"
+    notification_cron_secret: str | None = None
+    notification_max_attempts: int = 3
 
     @property
     def cors_origins(self) -> list[str]:

@@ -67,6 +67,15 @@ describe("Phase 3 list status styling key", () => {
         target_date_precision: "day",
       }, now),
     ).toBe("in_use");
+    expect(
+      itemStatusValue({
+        management_type: "other_payment_deadline",
+        actual_status: "in_use",
+        lifecycle_status: "active",
+        target_date_value: "2026-10-01",
+        target_date_precision: "day",
+      }, now),
+    ).toBe("in_use");
   });
 
   it("automatically expires every other type after a day or month target", () => {
@@ -93,5 +102,18 @@ describe("Phase 3 list status styling key", () => {
       "user-id",
     );
     expect(payload.lifecycle_status).toBe("expired");
+  });
+
+  it("clears automatic expiry after the target date moves to the future", () => {
+    const payload = buildManagedItemPayload(
+      {
+        ...createEmptyDraft("gifticon"),
+        service_name: "교환권",
+        target_date_value: "2999-11-01",
+        lifecycle_status: "expired",
+      },
+      "user-id",
+    );
+    expect(payload.lifecycle_status).toBe("unused");
   });
 });

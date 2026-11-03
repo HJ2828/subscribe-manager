@@ -49,3 +49,26 @@ export async function getImageSignedUrl(token: string, id: string): Promise<{ si
   if (!response.ok) throw new Error(payload.error?.message || "이미지를 불러오지 못했어요.");
   return payload as { signed_url: string };
 }
+
+async function notificationRequest<T>(token: string, path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${publicConfig.apiBaseUrl}${path}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || "알림 설정을 처리하지 못했어요.");
+  return payload as T;
+}
+
+export function getPushConfig(token: string) {
+  return notificationRequest<{ configured: boolean; public_key: string | null }>(token, "/api/v1/push/config");
+}
+
+export function registerPushSubscription(token: string, subscription: PushSubscriptionJSON) {
+  return notificationRequest<{ status: "registered" }>(token, "/api/v1/push/subscriptions", subscription);
+}
+
+export function unregisterPushSubscription(token: string, endpoint: string) {
+  return notificationRequest<{ status: "unregistered"; push_enabled: boolean }>(token, "/api/v1/push/unsubscribe", { endpoint });
+}

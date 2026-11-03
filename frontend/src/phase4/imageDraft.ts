@@ -64,6 +64,7 @@ export function retargetImageDraft(
   type: ManagementType,
 ): { draft: ManagedItemDraft; retainedFields: Set<keyof ManagedItemDraft> } {
   const recurring = type === "recurring_subscription";
+  const paymentSchedule = recurring || type === "other_payment_deadline";
   const fixed = type === "fixed_term_membership";
   const warranty = type === "warranty";
   const points = type === "points";
@@ -83,21 +84,21 @@ export function retargetImageDraft(
     retainedFields.add("currency");
   }
   if (recurring || fixed) retainedFields.add("plan_name");
-  if (consumable || warranty) retainedFields.add("provider_name");
+  if (consumable || points || warranty) retainedFields.add("provider_name");
   if (points) {
     retainedFields.add("amount");
     retainedFields.add("unit_name");
   }
-  if (recurring) {
+  if (paymentSchedule) {
     retainedFields.add("billing_cycle");
     retainedFields.add("payment_method");
   }
-  if (recurring || fixed || warranty) {
+  if (paymentSchedule || fixed || warranty) {
     retainedFields.add("start_date_value");
     retainedFields.add("start_date_precision");
   }
   if (consumable || points || warranty) retainedFields.add("conditions");
-  if (recurring || fixed) {
+  if (paymentSchedule || fixed) {
     retainedFields.add("actual_status");
     retainedFields.add("auto_renewal_status");
     retainedFields.add("usage_plan");

@@ -481,6 +481,27 @@ p {
   width: 20px;
   height: 20px;
 }
+
+.notification-button {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  background: #ee6b65;
+  font-size: 9px;
+  font-weight: 800;
+}
 .bottom-nav {
   display: none;
 }

@@ -85,3 +85,22 @@ def test_account_deletion_failure_does_not_return_completion() -> None:
 
     assert response.status_code == 502
     assert response.json()["error"]["code"] == "account_deletion_failed"
+
+
+def test_push_config_requires_authentication() -> None:
+    response = client.get("/api/v1/push/config")
+    assert response.status_code == 401
+
+
+def test_push_config_does_not_expose_private_key() -> None:
+    app.dependency_overrides[require_current_user] = override_user
+    response = client.get("/api/v1/push/config")
+    assert response.status_code == 200
+    assert set(response.json()) == {"configured", "public_key"}
+    assert "private" not in response.text.lower()
+
+
+def test_notification_worker_rejects_missing_cron_secret() -> None:
+    response = client.post("/api/v1/notifications/process")
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "invalid_cron_secret"

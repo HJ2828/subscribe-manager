@@ -49,6 +49,7 @@ EXTRACTION_SCHEMA: dict[str, Any] = {
             "type": "string",
             "enum": [
                 "recurring_subscription",
+                "other_payment_deadline",
                 "fixed_term_membership",
                 "gifticon",
                 "coupon",

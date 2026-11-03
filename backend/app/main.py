@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -9,6 +9,7 @@ from app.account_deletion import AccountDeletionService, get_account_deletion_se
 from app.config import Settings, get_settings
 from app.errors import ApiError, api_error_handler
 from app.image_service import ImageService, get_image_service
+from app.notification_service import NotificationService, get_notification_service
 from app.security import CurrentUser, require_current_user
 
 
@@ -101,6 +102,63 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> dict[str, object]:
         return {
             "asset": await image_service.confirm(user, asset_id, body.item_id, body.original_keep)
+        }
+
+    class PushSubscriptionRequest(BaseModel):
+        endpoint: str
+        keys: dict[str, str]
+
+    class PushUnsubscribeRequest(BaseModel):
+        endpoint: str
+
+    @app.get("/api/v1/push/config", tags=["notifications"])
+    async def push_config(
+        _: Annotated[CurrentUser, Depends(require_current_user)],
+    ) -> dict[str, object]:
+        return {
+            "configured": bool(
+                active_settings.vapid_public_key and active_settings.vapid_private_key
+            ),
+            "public_key": active_settings.vapid_public_key,
+        }
+
+    @app.post("/api/v1/push/subscriptions", tags=["notifications"])
+    async def register_push_subscription(
+        body: PushSubscriptionRequest,
+        request: Request,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[NotificationService, Depends(get_notification_service)],
+    ) -> dict[str, str]:
+        await service.register(user, body.model_dump(), request.headers.get("user-agent"))
+        return {"status": "registered"}
+
+    @app.post("/api/v1/push/unsubscribe", tags=["notifications"])
+    async def unregister_push_subscription(
+        body: PushUnsubscribeRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[NotificationService, Depends(get_notification_service)],
+    ) -> dict[str, object]:
+        remaining = await service.unregister(user, body.endpoint)
+        return {"status": "unregistered", "push_enabled": remaining}
+
+    @app.post("/api/v1/notifications/process", tags=["notifications"])
+    async def process_notifications(
+        service: Annotated[NotificationService, Depends(get_notification_service)],
+        x_cron_secret: Annotated[str | None, Header()] = None,
+    ) -> dict[str, int]:
+        if (
+            not active_settings.notification_cron_secret
+            or x_cron_secret != active_settings.notification_cron_secret
+        ):
+            raise ApiError(401, "invalid_cron_secret", "알림 작업 실행 권한이 없습니다.")
+        result = await service.process_due()
+        return {
+            "processed": result.processed,
+            "sent": result.sent,
+            "failed": result.failed,
+            "unknown": result.unknown,
+            "skipped": result.skipped,
+            "delayed": result.delayed,
         }
 
     return app

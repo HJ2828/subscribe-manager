@@ -33,6 +33,13 @@ Supabase 프로젝트 값이 없어도 상태 화면과 Backend 단위 테스트
 
 회원 탈퇴는 서버가 삭제 요청을 기록한 뒤 Supabase Auth 사용자를 삭제합니다. 실패하면 계정은 유지되고 `retry_pending` 상태가 남습니다. 성공 후 현재 `profiles`와 Phase 1의 사용자별 데이터는 외래 키 연쇄 삭제되며, 이후 Phase의 이미지·알림 정리는 `AccountDeletionService.run_pre_auth_cleanup_steps`에 연결합니다.
 
+## Phase 5 알림 설정
+
+1. VAPID 키 쌍을 생성해 공개 키는 `VAPID_PUBLIC_KEY`, 비공개 키는 `VAPID_PRIVATE_KEY`에 넣습니다. 두 값과 `NOTIFICATION_CRON_SECRET`은 Backend 전용이며 `VITE_*`에 넣지 않습니다.
+2. `VAPID_SUBJECT`에는 운영 연락처 이메일 또는 HTTPS 주소를 설정합니다.
+3. 운영 스케줄러에서 `POST /api/v1/notifications/process`를 주기적으로 호출하고 `X-Cron-Secret` 헤더에 Backend의 `NOTIFICATION_CRON_SECRET`과 같은 값을 전달합니다.
+4. Web Push는 운영 HTTPS, 브라우저 권한과 일부 모바일 환경의 PWA 설치 조건이 필요합니다. 설정 전이나 미지원 환경에서도 앱 안 알림은 유지됩니다.
+
 ## 검사
 
 - Frontend 타입 검사: `npm.cmd run check:frontend`
