@@ -26,7 +26,9 @@ import {
 } from "./phase4/Phase4Pages";
 import { CalendarPage } from "./phase5/CalendarPage";
 import { NotificationsPage } from "./phase5/NotificationsPage";
+import { ReportPage } from "./phase6/ReportPage";
 import "./styles.css";
+import "./page-layout.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 type Profile = {
@@ -786,11 +788,11 @@ const navItems = [
   ["홈", navHomeIcon, "/"],
   ["전체 목록", navListIcon, "/items"],
   ["캘린더", navCalendarIcon, "/calendar"],
-  ["리포트", navReportIcon, ""],
+  ["리포트", navReportIcon, "/reports"],
   ["설정", navSettingsIcon, "/settings"],
 ] as const;
 
-function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "settings" | "notifications" }) {
+function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "reports" | "settings" | "notifications" }) {
   const { client, session } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   useEffect(() => {
@@ -799,7 +801,7 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "se
       .then(({ count }) => setUnreadCount(count || 0));
   }, [client, session]);
   const activeForLabel = (label: string) =>
-    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : "settings";
+    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : "settings";
   return (
     <>
       <header className="app-header">
@@ -2307,6 +2309,12 @@ export default function App() {
     return (
       <Protected>
         <NotificationsPage navigation={<AppNavigation active="notifications" />} />
+      </Protected>
+    );
+  if (path === "/reports")
+    return (
+      <Protected>
+        <ReportPage navigation={<AppNavigation active="reports" />} />
       </Protected>
     );
   if (path === "/settings")

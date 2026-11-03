@@ -1,0 +1,47 @@
+/* Keep every protected page on the same horizontal grid as the unified home. */
+.settings-page,
+.dashboard,
+.items-page,
+.subscription-page,
+.detail-page,
+.phase4-page,
+.calendar-page,
+.notifications-page,
+.report-page {
+  width: 100%;
+  max-width: 1440px;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 64px;
+  padding-left: 64px;
+}
+
+@media (max-width: 1000px) {
+  .settings-page,
+  .dashboard,
+  .items-page,
+  .subscription-page,
+  .detail-page,
+  .phase4-page,
+  .calendar-page,
+  .notifications-page,
+  .report-page {
+    padding-right: 32px;
+    padding-left: 32px;
+  }
+}
+
+@media (max-width: 700px) {
+  .settings-page,
+  .dashboard,
+  .items-page,
+  .subscription-page,
+  .detail-page,
+  .phase4-page,
+  .calendar-page,
+  .notifications-page,
+  .report-page {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+}

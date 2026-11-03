@@ -1554,6 +1554,15 @@ export function Phase3DetailPage({
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [relationships, setRelationships] = useState<Array<{
+    id: string;
+    parent_item_id: string;
+    child_item_id: string;
+    relationship_type: "included_benefit" | "additional_charge" | "unknown_cost";
+    cost_item_id: string | null;
+    parent: { service_name: string } | null;
+    child: { service_name: string } | null;
+  }>>([]);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -1572,6 +1581,16 @@ export function Phase3DetailPage({
         else setItem(data as ManagedItem);
         setLoading(false);
       });
+  }, [client, itemId, session]);
+
+  useEffect(() => {
+    if (!client || !session) return;
+    client
+      .from("subscription_relationships")
+      .select("id,parent_item_id,child_item_id,relationship_type,cost_item_id,parent:items!subscription_relationships_parent_item_id_fkey(service_name),child:items!subscription_relationships_child_item_id_fkey(service_name)")
+      .eq("user_id", session.user.id)
+      .or(`parent_item_id.eq.${itemId},child_item_id.eq.${itemId}`)
+      .then(({ data }) => setRelationships((data || []) as unknown as typeof relationships));
   }, [client, itemId, session]);
 
   useEffect(() => {
@@ -1674,6 +1693,14 @@ export function Phase3DetailPage({
 
   async function remove() {
     if (!client || !session || !item || deleting) return;
+    if (relationships.length) {
+      setNotice({
+        tone: "error",
+        text: "결합 관계가 남아 있어 삭제하지 않았어요. 리포트에서 연결을 먼저 해제해 주세요.",
+      });
+      setDeleteConfirm(false);
+      return;
+    }
     setDeleting(true);
     setNotice({ tone: "info", text: "내부 항목 삭제를 처리하고 있어요." });
     const linkedImages = await client
@@ -1703,7 +1730,7 @@ export function Phase3DetailPage({
         internal_status: "pending",
         image_cleanup_status: imagesToTrash.length ? "pending" : "not_applicable",
         calendar_cleanup_status: "not_applicable",
-        relationship_cleanup_status: "not_applicable",
+        relationship_cleanup_status: relationships.length ? "pending" : "not_applicable",
       })
       .select()
       .single();
@@ -1846,17 +1873,15 @@ export function Phase3DetailPage({
             <ul>
               <li>현재 항목은 내부 목록과 상세에서 삭제됩니다.</li>
               <li>
-                미래 회차·내부 일정·미발송 알림은 아직 생성되지 않아 현재 정리
-                대상이 없습니다.
+                미래 내부 일정과 미발송 알림은 항목과 함께 정리됩니다.
               </li>
               <li>
-                연결 이미지와 Google 일정은 아직 없어 별도 정리가 필요하지
-                않습니다.
+                연결 이미지는 휴지통으로 이동합니다. Google 일정은 아직 연결되지
+                않았어요.
               </li>
               <li>
-                과거 이력 보존·복구 기간·결합 관계가 있는 항목의 삭제 정책은
-                미정이에요. 현재는 연결 데이터가 없으며, 이후 연결 데이터가
-                생기면 정책 확정 전 삭제를 진행하지 않는 구조로 연결해요.
+                결합 관계가 있는 항목은 삭제되지 않아요. 리포트에서 관계를 먼저
+                해제해야 합니다.
               </li>
             </ul>
             <p>현재 항목 삭제는 되돌릴 수 없어요.</p>
@@ -1991,6 +2016,33 @@ export function Phase3DetailPage({
                 </dl>
               </section>
             ) : null}
+            <section className="detail-card">
+              <h2>결합 구독</h2>
+              {relationships.length ? (
+                <dl>
+                  {relationships.map((relationship) => {
+                    const isParent = relationship.parent_item_id === item.id;
+                    const relatedName = isParent
+                      ? relationship.child?.service_name
+                      : relationship.parent?.service_name;
+                    const label = relationship.relationship_type === "included_benefit"
+                      ? "포함된 혜택"
+                      : relationship.relationship_type === "additional_charge"
+                        ? "추가 요금"
+                        : "금액 미확인 연결";
+                    return (
+                      <div key={relationship.id}>
+                        <dt>{isParent ? "이용 서비스" : "상위 구독"}</dt>
+                        <dd>{relatedName || "연결 항목"} · {label}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              ) : <p>연결된 구독 관계가 없어요.</p>}
+              <Link to="/reports" className="button secondary detail-image-manage">
+                결합 관계 관리
+              </Link>
+            </section>
             <section className="detail-card">
               <h2>메모</h2>
               <p>{item.memo || "저장된 메모가 없어요."}</p>
