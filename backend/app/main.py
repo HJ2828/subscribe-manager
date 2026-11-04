@@ -344,6 +344,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> list[dict[str, object]]:
         return await service.scraps_for_user(user)
 
+    @app.get("/api/v1/content/ott-news", tags=["content"])
+    async def ott_news(
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> list[dict[str, object]]:
+        return await service.ott_news_for_user(user)
+
     @app.post("/api/v1/content/news/{news_id}/scrap", tags=["content"])
     async def add_news_scrap(
         news_id: UUID,

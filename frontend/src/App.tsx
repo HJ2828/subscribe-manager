@@ -791,7 +791,7 @@ const navItems = [
   ["전체 목록", navListIcon, "/items"],
   ["캘린더", navCalendarIcon, "/calendar"],
   ["리포트", navReportIcon, "/reports"],
-  ["스크랩", navListIcon, "/scraps"],
+  ["소식", navListIcon, "/news"],
   ["설정", navSettingsIcon, "/settings"],
 ] as const;
 
@@ -805,7 +805,7 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
   }, [client, session]);
 
   const activeForLabel = (label: string) =>
-    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : label === "스크랩" ? "scraps" : "settings";
+    label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : label === "소식" ? "news" : "settings";
   return (
     <>
       <header className="app-header">
@@ -2347,7 +2347,7 @@ export default function App() {
   if (path === "/scraps")
     return (
       <Protected>
-        <ScrapsPage navigation={<AppNavigation active="scraps" />} />
+        <ScrapsPage navigation={<AppNavigation active="news" />} />
       </Protected>
     );
   if (path === "/operations")

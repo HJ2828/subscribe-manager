@@ -58,6 +58,7 @@ NEWS_SCHEMA = {
                     },
                     "official_source": {"type": "boolean"},
                     "official_item_id": {"type": ["string", "null"]},
+                    "is_ott_schedule": {"type": "boolean"},
                 },
                 "required": [
                     "news_type",
@@ -77,6 +78,7 @@ NEWS_SCHEMA = {
                     "applicability_status",
                     "official_source",
                     "official_item_id",
+                    "is_ott_schedule",
                 ],
                 "additionalProperties": False,
             },
@@ -86,8 +88,21 @@ NEWS_SCHEMA = {
     "additionalProperties": False,
 }
 
+EDITORIAL_OTT_SERVICES = (
+    ("netflix", "Netflix", ["Netflix", "넷플릭스"]),
+    ("tving", "티빙", ["TVING", "Tving", "티빙"]),
+    ("coupangplay", "쿠팡플레이", ["Coupang Play", "쿠팡플레이", "쿠팡 플레이"]),
+    ("wavve", "웨이브", ["Wavve", "웨이브"]),
+    ("disneyplus", "Disney+", ["Disney+", "Disney Plus", "디즈니+", "디즈니플러스"]),
+    ("watcha", "왓챠", ["Watcha", "왓챠"]),
+    ("laftel", "라프텔", ["Laftel", "라프텔"]),
+    ("appletvplus", "Apple TV+", ["Apple TV+", "Apple TV Plus", "애플TV+", "애플티비+"]),
+    ("hbomax", "HBO Max", ["HBO Max", "Max", "에이치비오 맥스"]),
+)
+
 
 class ContentService:
+    OTT_EDITORIAL_SERVICES = EDITORIAL_OTT_SERVICES
     SERVICE_ALIASES = {
         "netflix": ("netflix", "Netflix", ["Netflix", "넷플릭스"]),
         "넷플릭스": ("netflix", "Netflix", ["Netflix", "넷플릭스"]),
@@ -97,6 +112,11 @@ class ContentService:
         "미드저니": ("midjourney", "Midjourney", ["Midjourney", "미드저니"]),
         "chatgpt": ("chatgpt", "ChatGPT", ["ChatGPT", "챗GPT", "챗지피티"]),
         "챗지피티": ("chatgpt", "ChatGPT", ["ChatGPT", "챗GPT", "챗지피티"]),
+        **{
+            "".join(character.lower() for character in alias if character.isalnum()): service
+            for service in EDITORIAL_OTT_SERVICES
+            for alias in service[2]
+        },
     }
 
     def __init__(self, settings: Settings):
@@ -322,6 +342,52 @@ class ContentService:
         result.sort(key=lambda row: priority.get(row.get("news_type", "other"), 9))
         return result[:limit]
 
+    async def ott_news_for_user(
+        self, user: CurrentUser, limit: int = 18
+    ) -> list[dict[str, Any]]:
+        catalogs = [
+            catalog for catalog in await self._catalogs() if catalog.get("is_ott_editorial")
+        ]
+        if not catalogs:
+            return []
+        profile_rows = await self._db(
+            "GET",
+            "profiles",
+            params={"id": f"eq.{user.id}", "select": "country_code", "limit": "1"},
+        )
+        country = (profile_rows[0].get("country_code") if profile_rows else "KR") or "KR"
+        rows = await self._db(
+            "GET",
+            "service_news",
+            params={
+                "catalog_id": f"in.({','.join(catalog['id'] for catalog in catalogs)})",
+                "status": "eq.published",
+                "is_ott_schedule": "eq.true",
+                "select": "*",
+                "order": "announced_on.desc.nullslast,checked_at.desc",
+                "limit": str(limit),
+            },
+        )
+        scraps = await self._db(
+            "GET",
+            "user_news_scraps",
+            params={"user_id": f"eq.{user.id}", "select": "news_id"},
+        )
+        scrapped_ids = {row["news_id"] for row in scraps}
+        names = {catalog["id"]: catalog["display_name"] for catalog in catalogs}
+        return [
+            {
+                **row,
+                "service_name": names[row["catalog_id"]],
+                "is_scrapped": row["id"] in scrapped_ids,
+                "relevance_summary": (
+                    "구독 여부와 관계없이 제공하는 공식 OTT 공개 예정작 소식이에요."
+                ),
+            }
+            for row in rows
+            if not row.get("country_codes") or country in row["country_codes"]
+        ]
+
     @staticmethod
     def _relevance_summary(news: dict[str, Any], items: list[dict[str, Any]], country: str) -> str:
         if news.get("country_codes") and country not in news["country_codes"]:
@@ -355,7 +421,7 @@ class ContentService:
         result = []
         for scrap in scraps:
             row = by_id.get(scrap["news_id"])
-            if not row or row.get("status") != "published":
+            if not row or row.get("status") not in {"published", "archived"}:
                 result.append(
                     {
                         "id": scrap["news_id"],
@@ -370,6 +436,7 @@ class ContentService:
                     **row,
                     "service_name": catalogs.get(row["catalog_id"], {}).get("display_name"),
                     "is_available": True,
+                    "is_archived": row.get("status") == "archived",
                     "scrapped_at": scrap["created_at"],
                     "is_scrapped": True,
                 }
@@ -579,11 +646,45 @@ class ContentService:
         )
         return row[0]
 
+    async def _ensure_ott_editorial_catalogs(
+        self, catalogs: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        for canonical_key, display_name, aliases in self.OTT_EDITORIAL_SERVICES:
+            catalog = self._match_catalog(display_name, catalogs)
+            if not catalog:
+                created = await self._db(
+                    "POST",
+                    "service_catalogs",
+                    payload={
+                        "display_name": display_name,
+                        "canonical_key": canonical_key,
+                        "match_names": aliases,
+                        "news_support_status": "collecting",
+                        "cancellation_support_status": "management_only",
+                        "is_ott_editorial": True,
+                        "next_news_check_at": datetime.now(UTC).isoformat(),
+                    },
+                    params={"on_conflict": "canonical_key"},
+                    prefer="resolution=merge-duplicates,return=representation",
+                )
+                catalogs.append(created[0])
+            elif not catalog.get("is_ott_editorial"):
+                await self._db(
+                    "PATCH",
+                    "service_catalogs",
+                    params={"id": f"eq.{catalog['id']}"},
+                    payload={"is_ott_editorial": True},
+                )
+                catalog["is_ott_editorial"] = True
+        return catalogs
+
     async def process_due_news(self) -> dict[str, int]:
         if not self.settings.openai_api_key:
             raise ApiError(
                 503, "openai_not_configured", "자동 소식 수집 연결이 설정되지 않았습니다."
             )
+        cleanup_rows = await self._db("POST", "rpc/cleanup_old_service_news", payload={}) or []
+        cleanup = cleanup_rows[0] if cleanup_rows else {}
         items = await self._db(
             "GET",
             "items",
@@ -596,6 +697,8 @@ class ContentService:
         profiles = await self._db("GET", "profiles", params={"select": "id,country_code,timezone"})
         profile_by_id = {row["id"]: row for row in profiles}
         catalogs = await self._catalogs()
+        if self.settings.content_ott_editorial_enabled:
+            catalogs = await self._ensure_ott_editorial_catalogs(catalogs)
         counts: Counter[str] = Counter()
         service_locales: dict[str, list[tuple[str, str]]] = defaultdict(list)
         for item in items:
@@ -646,7 +749,7 @@ class ContentService:
             [
                 catalog
                 for catalog in catalogs
-                if counts[catalog["id"]] > 0
+                if (counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial"))
                 and (
                     not catalog.get("next_news_check_at")
                     or datetime.fromisoformat(catalog["next_news_check_at"].replace("Z", "+00:00"))
@@ -656,7 +759,11 @@ class ContentService:
             key=lambda row: row.get("last_news_check_at") or "",
         )
         result = {
-            "services": len(counts),
+            "services": sum(
+                1
+                for catalog in catalogs
+                if counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial")
+            ),
             "due": len(due),
             "searched": 0,
             "published": 0,
@@ -665,6 +772,8 @@ class ContentService:
             "budget_limited": 0,
             "unchanged": 0,
             "precheck_failed": 0,
+            "archived": int(cleanup.get("archived_count") or 0),
+            "deleted": int(cleanup.get("deleted_count") or 0),
         }
         estimate = self._reservation_cost()
         for catalog in due:
@@ -710,7 +819,10 @@ class ContentService:
                     locale_counts.most_common(1)[0][0] if locale_counts else ("KR", "Asia/Seoul")
                 )
                 payload, cited_urls, usage = await self._search_service_news(
-                    catalog["display_name"], country, timezone
+                    catalog["display_name"],
+                    country,
+                    timezone,
+                    bool(catalog.get("is_ott_editorial")),
                 )
                 stored = await self._store_search_result(catalog, payload, cited_urls)
                 result["published"] += stored["published"]
@@ -878,8 +990,20 @@ class ContentService:
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     async def _search_service_news(
-        self, service_name: str, country: str, timezone: str
+        self,
+        service_name: str,
+        country: str,
+        timezone: str,
+        is_ott_editorial: bool = False,
     ) -> tuple[dict[str, Any], set[str], dict[str, int]]:
+        editorial_instruction = (
+            "This service is part of the shared OTT editorial feed. Prioritize one official "
+            "monthly or weekly announcement that groups upcoming titles for the selected country. "
+            "Set is_ott_schedule=true only for an official announcement primarily about upcoming "
+            "or newly scheduled titles. Do not claim that a partial list is the complete schedule. "
+            if is_ott_editorial
+            else "Set is_ott_schedule=false unless this is an official OTT schedule announcement. "
+        )
         prompt = (
             "Find official announcements from the last 14 days about the recurring "
             f"subscription service named {service_name!r}. Prioritize official information "
@@ -906,7 +1030,8 @@ class ContentService:
             "each no longer than 200 characters. Preserve the official source title separately. "
             "Set source_language to a short language code such as ko or en. Set "
             "source_country_code only when the official page targets a specific country; use "
-            "null for a global announcement."
+            "null for a global announcement. "
+            + editorial_instruction
         )
         request = {
             "model": self.settings.content_collection_model,

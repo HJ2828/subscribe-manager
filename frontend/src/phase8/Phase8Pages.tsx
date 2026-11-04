@@ -10,6 +10,7 @@ import {
   getItemContent,
   getCollectionStatus,
   getRelevantNews,
+  getOttNews,
   getNewsScraps,
   getReviewData,
   reviewContent,
@@ -61,17 +62,26 @@ function NewsRow({ news, onScrap }: { news: ServiceNews; onScrap: (news: Service
 export function NewsPage({ navigation }: { navigation: ReactNode }) {
   const { session } = useAuth();
   const [news, setNews] = useState<ServiceNews[]>([]);
+  const [ottNews, setOttNews] = useState<ServiceNews[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [collection, setCollection] = useState<CollectionStatus | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (!session) return;
-    Promise.all([getRelevantNews(session.access_token), getCollectionStatus(session.access_token)]).then(([rows, status]) => { setNews(rows); setCollection(status); setState("ready"); }).catch(() => setState("error"));
+    Promise.all([getRelevantNews(session.access_token), getOttNews(session.access_token), getCollectionStatus(session.access_token)]).then(([rows, ottRows, status]) => { setNews(rows); setOttNews(ottRows); setCollection(status); setState("ready"); }).catch(() => setState("error"));
   }, [session]);
-  async function toggleScrap(entry: ServiceNews) { if (!session) return; try { if (entry.is_scrapped) await removeNewsScrap(session.access_token, entry.id); else await addNewsScrap(session.access_token, entry.id); setNews((rows) => rows.map((row) => row.id === entry.id ? { ...row, is_scrapped: !entry.is_scrapped } : row)); } catch { setState("error"); } }
+  async function toggleScrap(entry: ServiceNews) { if (!session) return; try { if (entry.is_scrapped) await removeNewsScrap(session.access_token, entry.id); else await addNewsScrap(session.access_token, entry.id); const update = (rows: ServiceNews[]) => rows.map((row) => row.id === entry.id ? { ...row, is_scrapped: !entry.is_scrapped } : row); setNews(update); setOttNews(update); } catch { setState("error"); } }
   const grouped = news.reduce<Record<string, ServiceNews[]>>((result, entry) => { const key = entry.service_name || "서비스"; (result[key] ||= []).push(entry); return result; }, {});
+  const ottByService = new Map<string, ServiceNews>();
+  ottNews.forEach((entry) => {
+    const key = entry.service_name || entry.catalog_id;
+    if (!ottByService.has(key)) ottByService.set(key, entry);
+  });
+  const ottRepresentatives = [...ottByService.values()];
   return <div className="app-shell">{navigation}<main className="phase8-page">
-    <header className="items-title"><h1>내 구독의 최신 소식</h1><p>내 국가의 공식 자료를 우선하고, 글로벌 서비스는 해외 공식 발표도 한국어로 요약해 보여드려요.</p></header>
+    <header className="items-title news-page-title"><div><h1>최신 소식</h1><p>OTT 공개 예정작과 내 구독에 관련된 공식 소식을 모아 보여드려요.</p></div><button className="button secondary" onClick={() => go("/scraps")}>스크랩</button></header>
+    {state === "ready" ? <section className="ott-editorial-section"><header><div><span>공통 OTT 편성</span><h2>OTT 공개 예정작</h2><p>구독 여부와 관계없이 국내 공식 발표를 우선해 서비스별 대표 편성 소식을 보여드려요.</p></div></header>{ottRepresentatives.length ? <div className="ott-editorial-grid">{ottRepresentatives.map((entry) => <article className="phase8-card ott-editorial-card" key={entry.id}><div className="ott-card-heading"><span>{entry.service_name}</span><time>{date(entry.announced_on)}</time></div><h3>{entry.title}</h3><p>{entry.summary}</p><div className="ott-card-actions"><button className={`scrap-button${entry.is_scrapped ? " active" : ""}`} onClick={() => toggleScrap(entry)} aria-label={entry.is_scrapped ? `${entry.title} 스크랩 해제` : `${entry.title} 스크랩`}>{entry.is_scrapped ? "★ 스크랩됨" : "☆ 스크랩"}</button><a href={entry.source_url} target="_blank" rel="noreferrer">공식 출처</a></div></article>)}</div> : <div className="ott-editorial-empty">공식 공개 예정작 소식을 수집 중이에요. 일부 확인 결과를 전체 편성표처럼 표시하지 않습니다.</div>}</section> : null}
+    <div className="news-section-heading"><h2>내 구독의 최신 소식</h2><p>국가·요금제와 연결되는 가격, 혜택, 기능과 콘텐츠 변경이에요.</p></div>
     {state === "loading" ? <div className="phase8-empty">소식을 불러오는 중…</div> : state === "error" ? <div className="notice error">소식을 불러오지 못했어요. 기존 관리 기능은 그대로 사용할 수 있어요.</div> : news.length ? <div className="service-news-list">{Object.entries(grouped).map(([service, entries]) => { const visible = expanded[service] ? entries : entries.slice(0, 2); return <section className="phase8-card service-news-group" key={service}><header><div><h2>{service}</h2><p>현재 표시 대상 {entries.length}건</p></div></header><div>{visible.map((entry) => <NewsRow key={entry.id} news={entry} onScrap={toggleScrap} />)}</div>{entries.length > 2 ? <button className="service-more" onClick={() => setExpanded((value) => ({ ...value, [service]: !value[service] }))}>{expanded[service] ? "접기" : `저장된 소식 ${entries.length - 2}건 더 보기`}</button> : null}</section>; })}</div> : <div className="phase8-empty"><strong>{collection?.status === "no_subscriptions" ? "수집할 반복 구독이 없어요" : collection?.status === "no_new_content" || collection?.status === "unchanged" ? "확인한 범위에서 새 소식이 없어요" : collection?.status === "precheck_failed" ? "공식 출처의 변경 여부를 확인하지 못했어요" : collection?.status === "search_failed" ? "소식 검색에 실패했어요" : collection?.status === "source_failed" ? "공식 원문을 확인하지 못했어요" : collection?.status === "budget_limited" ? "예산으로 이번 수집을 진행하지 못했어요" : collection?.configured ? "첫 소식 수집을 기다리고 있어요" : "자동 소식 수집 설정이 필요해요"}</strong><p>{collection?.last_checked_at ? `마지막 확인 ${date(collection.last_checked_at)}` : "반복 구독 서비스별 공통 수집이 실행되면 결과가 표시돼요."}</p></div>}
   </main></div>;
 }
@@ -82,7 +92,7 @@ export function ScrapsPage({ navigation }: { navigation: ReactNode }) {
   async function remove(entry: ServiceNews) { if (!session) return; try { await removeNewsScrap(session.access_token, entry.id); setRows((value) => value.filter((row) => row.id !== entry.id)); } catch { setState("error"); } }
   const services = [...new Set(rows.filter((row) => row.is_available !== false).map((row) => row.service_name).filter(Boolean))] as string[];
   const filtered = rows.filter((row) => (service === "all" || row.service_name === service) && (kind === "all" || row.news_type === kind));
-  return <div className="app-shell">{navigation}<main className="phase8-page"><header className="items-title"><h1>스크랩한 소식</h1><p>구독을 종료해도 저장한 공통 소식은 내 계정에 남아요.</p></header><div className="scrap-filters"><label>서비스<select value={service} onChange={(event) => setService(event.target.value)}><option value="all">전체</option>{services.map((value) => <option key={value}>{value}</option>)}</select></label><label>소식 종류<select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">전체</option>{Object.entries(newsTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>{state === "loading" ? <div className="phase8-empty">스크랩을 불러오는 중…</div> : state === "error" ? <div className="notice error">스크랩을 불러오지 못했어요.</div> : !filtered.length ? <div className="phase8-empty"><strong>조건에 맞는 스크랩이 없어요</strong><p>최신 소식에서 필요한 글을 저장해 보세요.</p></div> : <div className="scrap-list">{filtered.map((entry) => entry.is_available === false ? <article className="phase8-card unavailable-news" key={entry.id}><h2>현재 제공되지 않는 소식</h2><p>오류 또는 근거 부족으로 비공개되어 기존 본문을 표시하지 않아요.</p><button className="button secondary" onClick={() => remove(entry)}>스크랩 해제</button></article> : <section className="phase8-card service-news-group" key={entry.id}><header><div><h2>{entry.service_name}</h2><p>스크랩 {date(entry.scrapped_at)}</p></div></header><NewsRow news={entry} onScrap={remove} /></section>)}</div>}</main></div>;
+  return <div className="app-shell">{navigation}<main className="phase8-page"><header className="items-title news-page-title"><div><h1>스크랩한 소식</h1><p>구독을 종료해도 저장한 공통 소식은 내 계정에 남아요.</p></div><button className="button secondary" onClick={() => go("/news")}>최신 소식으로</button></header><div className="scrap-filters"><label>서비스<select value={service} onChange={(event) => setService(event.target.value)}><option value="all">전체</option>{services.map((value) => <option key={value}>{value}</option>)}</select></label><label>소식 종류<select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">전체</option>{Object.entries(newsTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>{state === "loading" ? <div className="phase8-empty">스크랩을 불러오는 중…</div> : state === "error" ? <div className="notice error">스크랩을 불러오지 못했어요.</div> : !filtered.length ? <div className="phase8-empty"><strong>조건에 맞는 스크랩이 없어요</strong><p>최신 소식에서 필요한 글을 저장해 보세요.</p></div> : <div className="scrap-list">{filtered.map((entry) => entry.is_available === false ? <article className="phase8-card unavailable-news" key={entry.id}><h2>현재 제공되지 않는 소식</h2><p>오류 또는 근거 부족으로 비공개되어 기존 본문을 표시하지 않아요.</p><button className="button secondary" onClick={() => remove(entry)}>스크랩 해제</button></article> : <section className="phase8-card service-news-group" key={entry.id}><header><div><h2>{entry.service_name}</h2><p>{entry.is_archived ? "보관된 소식 · " : ""}스크랩 {date(entry.scrapped_at)}</p></div></header><NewsRow news={entry} onScrap={remove} /></section>)}</div>}</main></div>;
 }
 
 export function ItemSupportContent({ itemId }: { itemId: string }) {

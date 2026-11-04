@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.config import Settings
@@ -15,11 +16,13 @@ class FakeCollectionService(ContentService):
                 content_daily_cost_limit_usd=2,
                 content_development_total_limit_usd=10,
                 content_estimated_cost_per_search_usd=0.05,
+                content_ott_editorial_enabled=False,
             )
         )
         self.item_query: dict[str, str] = {}
         self.runs: list[dict[str, Any]] = []
         self.search_calls = 0
+        self.catalog_rows: list[dict[str, Any]] = []
 
     async def _db(self, method: str, table: str, **kwargs: Any) -> Any:
         params = kwargs.get("params") or {}
@@ -32,7 +35,7 @@ class FakeCollectionService(ContentService):
         if table == "profiles":
             return [{"id": "user-1", "country_code": "KR", "timezone": "Asia/Seoul"}]
         if table == "service_catalogs" and method == "GET":
-            return []
+            return self.catalog_rows
         if table == "service_catalogs" and method == "POST":
             return [
                 {
@@ -66,11 +69,16 @@ class FakeCollectionService(ContentService):
         return None
 
     async def _search_service_news(
-        self, service_name: str, country: str, timezone: str
+        self,
+        service_name: str,
+        country: str,
+        timezone: str,
+        is_ott_editorial: bool = False,
     ) -> tuple[dict[str, Any], set[str], dict[str, int]]:
         self.search_calls += 1
         assert service_name == "Netflix"
         assert (country, timezone) == ("KR", "Asia/Seoul")
+        assert is_ott_editorial is False
         return (
             {"outcome": "no_new_content", "news": []},
             set(),
@@ -115,10 +123,33 @@ def test_collection_stops_before_search_when_daily_budget_is_exhausted() -> None
     assert service.search_calls == 0
 
 
+def test_service_is_not_searched_before_72_hour_due_time() -> None:
+    service = FakeCollectionService()
+    service.catalog_rows = [
+        {
+            "id": "catalog-1",
+            "display_name": "Netflix",
+            "canonical_key": "netflix",
+            "match_names": ["Netflix", "넷플릭스"],
+            "last_news_check_at": datetime.now(UTC).isoformat(),
+            "next_news_check_at": (datetime.now(UTC) + timedelta(hours=24)).isoformat(),
+            "is_ott_editorial": False,
+        }
+    ]
+
+    result = asyncio.run(service.process_due_news())
+
+    assert result["due"] == 0
+    assert result["searched"] == 0
+
+
 def test_aliases_share_one_canonical_service() -> None:
     service = FakeCollectionService()
     assert service._canonical_service("Netflix")[0] == service._canonical_service("넷플릭스")[0]
     assert service._canonical_service("youtube")[0] == service._canonical_service("유튜브")[0]
+    assert service._canonical_service("Disney+")[0] == service._canonical_service("디즈니플러스")[0]
+    assert service._canonical_service("Apple TV+")[0] == service._canonical_service("애플티비+")[0]
+    assert service._canonical_service("HBO Max")[0] == service._canonical_service("Max")[0]
 
 
 def test_reservation_uses_token_and_tool_upper_bounds() -> None:

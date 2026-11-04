@@ -121,6 +121,7 @@ export type ServiceNews = {
   applicability_status: "confirmed" | "needs_confirmation"; checked_at: string; status: string; matching_item_ids?: string[];
   last_verified_at?: string | null; collected_at?: string; relevance_summary?: string; is_scrapped?: boolean;
   is_available?: boolean; scrapped_at?: string;
+  is_archived?: boolean; is_ott_schedule?: boolean;
 };
 export type CancellationGuide = {
   id: string; catalog_id: string; payment_path: string; country_code: string; plan_scope: string | null; title: string;
@@ -147,6 +148,7 @@ async function contentRequest<T>(token: string, path: string, method = "GET", bo
 
 export const getRelevantNews = (token: string) => contentRequest<ServiceNews[]>(token, "/api/v1/content/news");
 export const getNewsScraps = (token: string) => contentRequest<ServiceNews[]>(token, "/api/v1/content/scraps");
+export const getOttNews = (token: string) => contentRequest<ServiceNews[]>(token, "/api/v1/content/ott-news");
 export const addNewsScrap = (token: string, newsId: string) => contentRequest<{ news_id: string; is_scrapped: boolean }>(token, `/api/v1/content/news/${newsId}/scrap`, "POST");
 export const removeNewsScrap = (token: string, newsId: string) => contentRequest<{ news_id: string; is_scrapped: boolean }>(token, `/api/v1/content/news/${newsId}/scrap`, "DELETE");
 export type CollectionStatus = { configured: boolean; status: "ready" | "no_subscriptions" | "awaiting_first_run" | "new_content" | "no_new_content" | "search_failed" | "source_failed" | "precheck_failed" | "unchanged" | "conditions_unconfirmed" | "budget_limited"; service_count: number; last_checked_at: string | null };
