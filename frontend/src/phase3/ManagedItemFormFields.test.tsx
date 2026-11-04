@@ -95,7 +95,7 @@ describe("shared managed item form", () => {
     expect(screen.getByLabelText(/^사용처/)).toHaveValue("예시 카페");
     expect(screen.getByLabelText("금액")).toHaveValue(null);
     expect(screen.getByLabelText("실제 통화")).toHaveValue("KRW");
-    expect(screen.getByLabelText("유효기간 정밀도")).toBeInTheDocument();
+    expect(screen.getByLabelText("유효기한 정밀도")).toBeInTheDocument();
     expect(screen.getByLabelText("이용 조건")).toBeInTheDocument();
     expect(screen.getByLabelText("사용 상태")).toBeInTheDocument();
     expect(screen.getByLabelText("카테고리")).toBeInTheDocument();

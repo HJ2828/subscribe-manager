@@ -25,9 +25,15 @@ export const CALENDAR_KIND_LABELS: Record<CalendarEventKind, string> = {
   renewal: "갱신",
   cancellation: "해지 마감",
   review: "검토",
-  expiry: "기간 만료",
+  expiry: "기한 만료",
   warranty: "보장 종료",
 };
+
+export const CALENDAR_KIND_GROUPS = [
+  { key: "billing", label: "결제·갱신", kinds: ["payment", "renewal"] },
+  { key: "decision", label: "해지·검토", kinds: ["cancellation", "review"] },
+  { key: "ending", label: "만료·보장 종료", kinds: ["expiry", "warranty"] },
+] as const satisfies ReadonlyArray<{ key: string; label: string; kinds: readonly CalendarEventKind[] }>;
 
 const BENEFIT_TYPES = new Set<ManagementType>(["gifticon", "coupon", "voucher", "points"]);
 

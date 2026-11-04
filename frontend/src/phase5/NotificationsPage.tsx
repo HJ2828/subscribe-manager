@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
+import { PageHeader } from "../components/ui";
 import { getPushConfig, registerPushSubscription, unregisterPushSubscription } from "../lib/api";
 import "./phase5.css";
 
@@ -93,10 +94,10 @@ export function NotificationsPage({ navigation }: { navigation: ReactNode }) {
   }
 
   return <div className="app-shell">{navigation}<main className="notifications-page">
-    <header className="phase5-heading"><div><span>REMINDERS</span><h1>알림</h1><p>발송된 앱 안 알림과 이 기기의 Push 상태를 확인해요.</p></div></header>
+    <PageHeader eyebrow="알림" title="알림" description="앱 안 알림과 이 기기의 Push 상태를 확인하세요." actions={<button className="button secondary" type="button" onClick={markAllRead} disabled={!notifications.some((item) => !item.read_at)}>모두 읽음</button>} />
     <section className="push-card"><div><h2>Web Push</h2><p>{!pushSupported ? "이 브라우저에서는 Web Push를 지원하지 않아요. 앱 안 알림은 유지됩니다." : pushEnabled ? "이 기기에서 Push를 받을 수 있어요." : "권한을 허용하면 브라우저를 닫아도 지원 환경에서 Push를 받을 수 있어요."}</p></div>{pushSupported ? <button className={`button ${pushEnabled ? "secondary" : "primary"}`} type="button" onClick={pushEnabled ? disablePush : enablePush}>{pushEnabled ? "이 기기에서 끄기" : "이 기기에서 켜기"}</button> : null}</section>
     {notice ? <div className="notice info">{notice}</div> : null}
-    <div className="notification-actions"><button className="button secondary" type="button" onClick={markAllRead} disabled={!notifications.some((item) => !item.read_at)}>모두 읽음</button></div>
+    <div className="notification-actions" aria-hidden="true" />
     {loading ? <div className="phase5-state">알림을 불러오는 중…</div> : notifications.length ? <section className="notification-list">{notifications.map((item) => <article className={`notification-card${item.read_at ? "" : " unread"}`} key={item.id}><i aria-hidden="true"/><div onClick={() => item.target_path && navigate(item.target_path)} role={item.target_path ? "button" : undefined} tabIndex={item.target_path ? 0 : undefined}><strong>{item.title}</strong><p>{item.body}</p><small>{new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.created_at))}</small></div>{!item.read_at ? <button type="button" onClick={() => markRead(item.id)}>읽음</button> : null}</article>)}</section> : <div className="phase5-state">아직 도착한 알림이 없어요.</div>}
   </main></div>;
 }

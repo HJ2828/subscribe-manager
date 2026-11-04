@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { todayInTimeZone } from "../home/homeModel";
 import { isPaymentScheduleType, type ManagedItem } from "../phase3/model";
+import { PageHeader } from "../components/ui";
 import {
   buildMetricRows,
   buildMonthlyBreakdown,
@@ -200,10 +201,7 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
     <div className="app-shell">
       {navigation}
       <main className="report-page">
-        <header className="report-title">
-          <div><span>PHASE 6</span><h1>지출 리포트</h1><p>등록된 예상 일정과 결합 관계를 기준으로 비용을 중복 없이 확인해요.</p></div>
-          <small>기준일 · {today} · {timezone}</small>
-        </header>
+        <PageHeader eyebrow="리포트" title="지출 리포트" description="예상 지출과 구독 현황을 확인하세요." actions={<small className="page-header-context">기준일 · {today} · {timezone}</small>} />
         {error ? <div className="notice error" role="alert">{error}</div> : null}
 
         <section className="report-controls" aria-label="리포트 기간">

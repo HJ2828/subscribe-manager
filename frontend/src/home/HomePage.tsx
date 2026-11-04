@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getAnnouncements, getCollectionStatus, getRelevantNews, type CollectionStatus, type OperatorAnnouncement, type ServiceNews } from "../lib/api";
 import { displayDate, typeLabel, type ManagedItem } from "../phase3/model";
+import { GlassCard, PageHeader } from "../components/ui";
+import galleryIcon from "../assets/figma/gallery.svg";
 import {
   buildHomeSchedule,
   daysBetween,
@@ -59,6 +61,44 @@ function eventSubtitle(event: HomeScheduleEvent) {
   }
   const type = typeLabel(event.managementType);
   return event.providerName ? `${type} · ${event.providerName}` : type;
+}
+
+function ReviewPanel({
+  items,
+  visibleItems,
+  page,
+  pageCount,
+  onPage,
+}: {
+  items: ManagedItem[];
+  visibleItems: ManagedItem[];
+  page: number;
+  pageCount: number;
+  onPage: (page: number) => void;
+}) {
+  return (
+    <section className="home-card review-card home-review-section">
+      <div className="home-card-header">
+        <div>
+          <div className="review-top-line">
+            <div className="review-label-line"><span className="section-label">확인 필요</span><span className="review-count">{items.length}건</span></div>
+            {items.length > 2 ? (
+              <div className="review-navigation" aria-label="확인 필요 항목 페이지 이동">
+                <button type="button" aria-label="이전 항목" disabled={page === 0} onClick={() => onPage(page - 1)}>‹</button>
+                <button type="button" aria-label="다음 항목" disabled={page >= pageCount - 1} onClick={() => onPage(page + 1)}>›</button>
+              </div>
+            ) : null}
+          </div>
+          <h2>일정과 금액을 완성해 주세요</h2><p>정보를 보완하면 예정 금액과 알림이 더 정확해져요.</p>
+        </div>
+      </div>
+      <div className="review-list">
+        {items.length ? visibleItems.map((item) => (
+          <Link to={`/items/${item.id}/edit`} className="review-row" key={item.id}><span><b>{item.service_name}</b><small>{!item.target_date_value || item.target_date_precision !== "day" ? "정확한 날짜 확인 필요" : "금액·통화 확인 필요"}</small></span><strong>보완하기 →</strong></Link>
+        )) : <div className="home-empty compact">지금은 확인할 항목이 없어요.</div>}
+      </div>
+    </section>
+  );
 }
 
 function monthShift(value: string, amount: number) {
@@ -160,47 +200,43 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
     <div className="app-shell">
       {navigation}
       <main className="unified-home">
-        <header className="home-hero">
-          <div>
-            <h1>놓치기 전에, 한눈에.</h1>
-            <p>등록한 결제와 혜택 기한을 가까운 순서로 확인하세요.</p>
-            <small>기준 · {displayDate(today, "day")} · {timezone}</small>
-          </div>
-          <div className="home-actions">
-            <Link to="/items/new" className="button primary">＋ 직접 등록</Link>
-            <Link to="/images" className="button secondary">이미지 관리</Link>
-          </div>
-        </header>
+        <PageHeader eyebrow="오늘의 달리" title="다가오는 결제와 기한" description={`이번 달 구독과 기한을 한눈에 확인하세요 · ${displayDate(today, "day")} · ${timezone}`} mascot="moon" actions={<div className="home-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
 
         {error ? <div className="notice error" role="alert">{error}</div> : null}
         {announcements.length ? <section className="home-announcements" aria-label="운영 공지사항"><h2>공지사항</h2>{announcements.map((entry) => <article key={entry.id}><div><strong>{entry.title}</strong><small>{entry.published_at?.slice(0, 10) || entry.created_at.slice(0, 10)}</small></div><p>{entry.body}</p></article>)}</section> : null}
         {!error ? (
           <>
-            <section className="home-summary-grid" aria-label="다음 30일 요약">
+            <GlassCard as="section" className="home-overview-panel" aria-label="다음 30일 요약">
               <article className="home-summary-card primary-summary">
-                <span>다음 30일 예정 결제</span>
+                <span>앞으로 30일 예정 금액</span>
                 <strong>{money(summary.totals.KRW || 0, "KRW")}</strong>
-                {Object.entries(summary.totals)
-                  .filter(([currency]) => currency !== "KRW")
-                  .map(([currency, value]) => (
-                    <small key={currency}>{money(value, currency)}</small>
-                  ))}
+                {Object.entries(summary.totals).some(([currency]) => currency !== "KRW") ? (
+                  <small className="foreign-total-line">
+                    {Object.entries(summary.totals)
+                      .filter(([currency]) => currency !== "KRW")
+                      .map(([currency, value], index) => (
+                        <span key={currency}>{index ? " · " : ""}{money(value, currency)}</span>
+                      ))}
+                  </small>
+                ) : null}
                 {summary.excludedAmountCount ? (
                   <em>금액 미확인 {summary.excludedAmountCount}건 합계 제외</em>
                 ) : null}
                 <p>등록된 일정 기준 예상 금액 · 실제 결제 내역 아님</p>
               </article>
-              <article className="home-summary-card">
-                <span>결제 예정</span>
-                <strong>{summary.paymentCount}건</strong>
-                <p>{displayDate(today, "day")}부터 {displayDate(summary.end, "day")}까지</p>
-              </article>
-              <article className="home-summary-card">
-                <span>만료 예정 혜택</span>
-                <strong>{summary.benefitCount}건</strong>
-                <p>미사용 혜택 중 정확한 만료일이 있는 항목</p>
-              </article>
-            </section>
+              <div className="home-overview-metrics">
+                <article className="home-summary-card">
+                  <span>결제 예정</span>
+                  <strong>{summary.paymentCount}<small>건</small></strong>
+                  <p>{displayDate(summary.end, "day")}까지</p>
+                </article>
+                <article className="home-summary-card">
+                  <span>만료 예정 혜택</span>
+                  <strong>{summary.benefitCount}<small>건</small></strong>
+                  <p>정확한 만료일 기준</p>
+                </article>
+              </div>
+            </GlassCard>
 
             <section className="home-main-grid">
               <article className="home-card upcoming-card">
@@ -233,15 +269,15 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
                           </span>
                           <span className={`upcoming-payment${amount === null ? " no-amount" : ""}`}>
                             {amount !== null ? <strong>{amount}</strong> : null}
-                            <small className={`event-kind ${event.kind}`}>{event.kind === "payment" ? "결제 예정" : "기간 만료 예정"}</small>
+                            <small className={`event-kind ${event.kind}`}>{event.kind === "payment" ? "결제 예정" : "기한 만료 예정"}</small>
                           </span>
-                          <em className={dday <= 3 ? "urgent" : ""}>{dday === 0 ? "D-day" : `D-${dday}`}</em>
+                          <em className={dday <= 3 ? "urgent" : dday <= 7 ? "soon" : ""}>{dday === 0 ? "D-day" : `D-${dday}`}</em>
                         </button>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="home-empty">{filter === "payment" ? "다가오는 결제 일정이 없어요." : filter === "benefit" ? "다가오는 기간 만료 예정 일정이 없어요." : "다가오는 일정이 없어요."}</div>
+                  <div className="home-empty">{filter === "payment" ? "다가오는 결제 일정이 없어요." : filter === "benefit" ? "다가오는 기한 만료 예정 일정이 없어요." : "다가오는 일정이 없어요."}</div>
                 )}
                 <Link to="/items" className="home-list-link">전체 목록 보기 →</Link>
               </article>
@@ -270,35 +306,17 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
                       );
                     })}
                   </div>
-                  <div className="calendar-legend"><span><i className="payment-dot" /> 결제</span><span><i className="benefit-dot" /> 기간 만료 예정</span></div>
-                  <Link to="/calendar" className="calendar-full-link">전체 캘린더 보기 →</Link>
+                  <div className="calendar-legend"><div><span><i className="payment-dot" /> 결제</span><span><i className="benefit-dot" /> 기한 만료</span></div><Link to="/calendar" className="calendar-full-link">전체 캘린더 보기 →</Link></div>
                   {selectedDate ? (
                     <div className="selected-date-panel">
                       <strong>{displayDate(selectedDate, "day")}</strong>
                       {dateEvents.length ? dateEvents.map((event) => (
-                        <button type="button" key={event.key} onClick={() => navigate(`/items/${event.itemId}`)}>{event.name} · {event.kind === "payment" ? "결제" : "기간 만료 예정"}</button>
+                        <button type="button" key={event.key} onClick={() => navigate(`/items/${event.itemId}`)}>{event.name} · {event.kind === "payment" ? "결제" : "기한 만료"}</button>
                       )) : <span>이 날짜에 등록된 일정이 없어요.</span>}
                     </div>
                   ) : null}
                 </section>
-
-                <section className="home-card review-card">
-                  <div className="home-card-header">
-                    <div><h2>정보를 확인해 주세요</h2><p>정확한 일정과 합계에 필요한 항목이에요.</p></div>
-                    <span className="review-count">{reviewItems.length}건</span>
-                  </div>
-                  <div className="review-list">
-                    {reviewItems.length ? visibleReviewItems.map((item) => (
-                      <Link to={`/items/${item.id}/edit`} className="review-row" key={item.id}><span><b>{item.service_name}</b><small>{!item.target_date_value || item.target_date_precision !== "day" ? "정확한 날짜 확인 필요" : "금액·통화 확인 필요"}</small></span><strong>정보 입력</strong></Link>
-                    )) : <div className="home-empty compact">확인이 필요한 항목이 없어요.</div>}
-                  </div>
-                  {reviewItems.length > 2 ? (
-                    <div className="review-navigation" aria-label="확인 필요 항목 페이지 이동">
-                      <button type="button" aria-label="이전 항목" disabled={reviewPage === 0} onClick={() => setReviewPage((page) => page - 1)}>‹</button>
-                      <button type="button" aria-label="다음 항목" disabled={reviewPage >= reviewPageCount - 1} onClick={() => setReviewPage((page) => page + 1)}>›</button>
-                    </div>
-                  ) : null}
-                </section>
+                <ReviewPanel items={reviewItems} visibleItems={visibleReviewItems} page={reviewPage} pageCount={reviewPageCount} onPage={setReviewPage} />
               </aside>
             </section>
 

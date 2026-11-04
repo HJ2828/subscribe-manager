@@ -1,0 +1,548 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+:root {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+  color: #172033;
+  background: #f3f9ff;
+  --ink: #172033;
+  --muted: #5d687d;
+  --primary: #002d80;
+  --primary-dark: #001f5c;
+  --primary-soft: #eaf1ff;
+  --secondary: #6a3ea3;
+  --secondary-soft: #f3eff8;
+  --moon: #fff1ad;
+  --alien: #c3f0bd;
+  --line: #dce6f0;
+  --surface: #fff;
+  --field: #fff;
+  --readonly: #eef3f8;
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
+  --warning: #92400e;
+  --warning-soft: #fef3c7;
+  --urgent: #c2410c;
+  --urgent-soft: #fff0e5;
+  --success: #246b3f;
+  --success-soft: #eaf8e8;
+  --ended: #667085;
+  --ended-soft: #f2f4f7;
+  --shadow-card: 0 8px 24px rgb(0 45 128 / 5%);
+  --shadow-preview: 0 22px 60px rgb(0 45 128 / 10%);
+}
+
+html,
+body,
+.app-shell,
+.auth-page,
+.completion-page {
+  background: #f3f9ff;
+}
+
+body {
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-duration: 180ms;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgb(0 45 128 / 24%);
+  outline-offset: 2px;
+}
+
+.public-header,
+.app-header {
+  border-color: var(--line);
+  background: rgb(255 255 255 / 96%);
+}
+
+.app-header {
+  box-shadow: 0 4px 18px rgb(0 45 128 / 4%);
+}
+
+.brand {
+  gap: 11px;
+  color: var(--primary);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.brand-mark {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  overflow: visible;
+  border: 1px solid #f0d873;
+  border-radius: 50%;
+  background: var(--moon);
+  box-shadow: inset -5px -5px 9px rgb(222 165 36 / 18%);
+}
+
+.brand-mark::before,
+.brand-mark::after,
+.brand-mark > span::before {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: rgb(177 123 31 / 13%);
+}
+
+.brand-mark::before { width: 7px; height: 7px; top: 7px; left: 8px; }
+.brand-mark::after { width: 5px; height: 5px; right: 7px; bottom: 8px; }
+.brand-mark > span::before { width: 4px; height: 4px; top: 9px; right: 8px; }
+
+.brand-mark > span::after {
+  content: "";
+  position: absolute;
+  width: 46px;
+  height: 18px;
+  top: 8px;
+  left: -6px;
+  border: 1px solid rgb(98 75 128 / 34%);
+  border-radius: 50%;
+  transform: rotate(-15deg);
+}
+
+.desktop-nav a,
+.desktop-nav > span {
+  min-height: 44px;
+  border-radius: 10px;
+  color: #536078;
+}
+
+.desktop-nav a:hover {
+  color: var(--primary);
+  background: #f7faff;
+}
+
+.desktop-nav a.active {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.notification-button {
+  width: 44px;
+  height: 44px;
+  border-color: var(--line);
+  background: #fff;
+}
+
+.auth-content {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: calc(100vh - 80px);
+}
+
+.auth-flow {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-mascots img {
+  position: absolute;
+  z-index: 0;
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-mascots img:first-child {
+  right: max(32px, calc(50vw - 520px));
+  bottom: 38px;
+  transform: rotate(8deg);
+}
+
+.auth-mascots img:last-child {
+  left: max(24px, calc(50vw - 520px));
+  top: 52px;
+  width: 88px;
+  height: 88px;
+  transform: rotate(-7deg);
+}
+
+.page-title h1,
+.settings-title h1,
+.items-title h1,
+.calendar-title h1,
+.report-title h1,
+.phase8-page h1,
+.completion-content h1 {
+  color: var(--primary);
+  font-size: clamp(28px, 3vw, 32px);
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+}
+
+.auth-card,
+.settings-card,
+.dashboard-card,
+.home-summary-card,
+.home-card,
+.phase3-card,
+.phase4-card,
+.calendar-card,
+.notifications-card,
+.report-card,
+.report-panel,
+.phase8-card,
+.google-calendar-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.auth-card {
+  box-shadow: 0 18px 48px rgb(0 45 128 / 8%);
+}
+
+.field input,
+.field select,
+.field textarea,
+.form-field input,
+.form-field select,
+.form-field textarea,
+.report-controls input,
+.report-controls select,
+.scrap-filters select {
+  min-height: 48px;
+  border-color: #cfdbe7;
+  border-radius: 10px;
+  background-color: #fff;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(0 45 128 / 10%);
+}
+
+.field[data-invalid="true"] input,
+.field[data-invalid="true"] select,
+.field[data-invalid="true"] textarea {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+.button {
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.button.primary {
+  border-radius: 999px;
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 5px 14px rgb(0 45 128 / 16%);
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.button.secondary {
+  border-color: #cfdbe7;
+  color: var(--primary);
+}
+
+.notice-box,
+.info-panel {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.notice-box[data-tone="error"],
+.google-message.error {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.notice-box[data-tone="success"],
+.google-message.success {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.warning-panel,
+.review-warning,
+.report-note {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.unified-home {
+  padding-top: 48px;
+}
+
+.home-hero h1 {
+  color: var(--primary);
+  font-size: clamp(32px, 3.3vw, 44px);
+  font-weight: 750;
+}
+
+.home-summary-grid {
+  gap: 16px;
+}
+
+.home-summary-card {
+  min-height: 168px;
+}
+
+.home-summary-card > strong,
+.upcoming-date b,
+.upcoming-payment strong,
+.report-card > strong,
+.period-amount-card > strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.primary-summary {
+  border-color: #c9d9ee;
+  background: linear-gradient(145deg, #fff 46%, #edf4ff 100%);
+}
+
+.primary-summary::after {
+  content: "";
+  align-self: flex-end;
+  width: 34px;
+  height: 34px;
+  margin-top: -26px;
+  border-radius: 50%;
+  background: var(--moon);
+  box-shadow: inset -5px -4px 7px rgb(180 128 34 / 13%);
+}
+
+.schedule-filters {
+  background: #edf3f8;
+}
+
+.schedule-filters button {
+  min-height: 36px;
+}
+
+.schedule-filters button.active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: none;
+}
+
+.upcoming-row:hover {
+  background: #f7faff;
+}
+
+.upcoming-identity > i {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.event-kind.benefit,
+.benefit-dot {
+  color: var(--secondary);
+  background-color: var(--secondary);
+}
+
+.upcoming-row > em {
+  color: var(--primary);
+  background: var(--primary-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.upcoming-row > em.soon {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.upcoming-row > em.urgent {
+  color: var(--urgent);
+  background: var(--urgent-soft);
+}
+
+.calendar-days button {
+  min-height: 44px;
+}
+
+.calendar-days button.today {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.calendar-days button.selected {
+  color: #fff;
+  background: var(--primary);
+}
+
+.selected-date-panel button,
+.schedule-manager label {
+  background: #f5f8fb;
+}
+
+.home-announcements,
+.service-news-group > header,
+.ott-editorial-section {
+  border-color: #d9cfe4;
+  background: var(--secondary-soft);
+}
+
+.home-news-card:hover,
+.phase8-card:hover {
+  border-color: #b8cbe3;
+}
+
+.impact,
+.news-impact,
+.news-details-body,
+.advanced-content-tools,
+.visual-detail,
+.google-calendar-summary {
+  background: #f6f8fb;
+}
+
+.choice-chip[aria-pressed="true"],
+.view-tabs button.active,
+.scrap-button.active {
+  color: var(--primary);
+  border-color: #9bb5d6;
+  background: var(--primary-soft);
+}
+
+.sphere-view,
+.bubble-force-chart {
+  background: radial-gradient(circle at 48% 34%, #fffdf2 0, #f3f9ff 55%, #edf3fb 100%);
+}
+
+.sphere-view button {
+  border-color: #d7e1ef;
+  color: var(--primary);
+  background: linear-gradient(145deg, #fffdf0, #ffe9a0);
+  box-shadow: inset -10px -10px 22px rgb(176 127 30 / 13%), 0 8px 18px rgb(0 45 128 / 9%);
+}
+
+.bubble-force-chart button {
+  border-color: #f3f9ff;
+  color: #173854;
+  background: #c3f0bd;
+  box-shadow: inset -8px -9px 18px rgb(49 125 71 / 12%), 0 5px 12px rgb(0 45 128 / 10%);
+}
+
+.bubble-force-chart button:nth-of-type(3n + 2) {
+  color: #fff;
+  background: #6a3ea3;
+}
+
+.bubble-force-chart button:nth-of-type(3n) {
+  color: #173854;
+  background: #fff1ad;
+}
+
+.bubble-force-chart button.selected {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgb(0 45 128 / 16%), 0 7px 16px rgb(0 45 128 / 16%);
+}
+
+.bar-chart i,
+.future-color {
+  background: var(--primary);
+}
+
+.google-status {
+  color: var(--secondary);
+  background: var(--secondary-soft);
+}
+
+.google-status.status-connected {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.google-status.status-sync_delayed,
+.google-status.status-reauth_required {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.phase8-card,
+.service-news-group,
+.audit-list {
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.bottom-nav {
+  border-color: var(--line);
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 -8px 24px rgb(0 45 128 / 7%);
+}
+
+@media (max-width: 700px) {
+  .auth-mascots img:first-child {
+    right: -12px;
+    bottom: 10px;
+    width: 72px;
+    height: 72px;
+    opacity: 0.72;
+  }
+
+  .auth-mascots img:last-child {
+    display: none;
+  }
+
+  .unified-home {
+    padding-top: 28px;
+  }
+
+  .home-hero h1 {
+    font-size: 34px;
+  }
+
+  .home-actions .button {
+    min-height: 48px;
+  }
+
+  .upcoming-row {
+    background: #fff;
+  }
+
+  .phase8-page {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition: none !important;
+  }
+}

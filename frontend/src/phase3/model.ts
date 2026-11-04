@@ -78,8 +78,8 @@ export const TYPE_OPTIONS: Array<{
   },
   {
     value: "fixed_term_membership",
-    label: "기간제 구독·멤버십",
-    shortLabel: "기간제 멤버십",
+    label: "기한제 구독·멤버십",
+    shortLabel: "기한제 멤버십",
   },
   { value: "gifticon", label: "기프티콘", shortLabel: "기프티콘" },
   { value: "coupon", label: "쿠폰", shortLabel: "쿠폰" },
@@ -204,6 +204,40 @@ export function displayDate(
   })
     .format(date)
     .replace(/\.$/, "");
+}
+
+export type DdayTone = "normal" | "soon" | "urgent" | "ended";
+
+export function isPastDate(
+  value: string | null,
+  precision: DatePrecision | null,
+  now = new Date(),
+) {
+  if (!value || !precision || !validDateValue(value, precision)) return false;
+  if (precision === "month") {
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return value < currentMonth;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  return Date.UTC(year, month - 1, day) < Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+export function formatDday(
+  value: string | null,
+  precision: DatePrecision | null,
+  now = new Date(),
+): { label: string; tone: DdayTone } | null {
+  if (!value || precision !== "day" || !validDateValue(value, precision)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  const target = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const difference = Math.round((target - today) / 86_400_000);
+
+  if (difference < 0) return { label: `D+${Math.abs(difference)}`, tone: "ended" };
+  if (difference === 0) return { label: "D-day", tone: "urgent" };
+  if (difference <= 3) return { label: `D-${difference}`, tone: "urgent" };
+  if (difference <= 7) return { label: `D-${difference}`, tone: "soon" };
+  return { label: `D-${difference}`, tone: "normal" };
 }
 
 function anchoredDate(year: number, monthIndex: number, anchorDay: number) {

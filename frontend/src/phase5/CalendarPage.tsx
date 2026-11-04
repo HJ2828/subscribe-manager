@@ -4,8 +4,10 @@ import { useAuth } from "../auth/AuthContext";
 import { addDays, todayInTimeZone } from "../home/homeModel";
 import { getGoogleCalendarStatus, type GoogleCalendarStatus } from "../lib/api";
 import { typeLabel, type ManagedItem } from "../phase3/model";
+import { PageHeader } from "../components/ui";
 import {
   CALENDAR_KIND_LABELS,
+  CALENDAR_KIND_GROUPS,
   buildCalendarEvents,
   filterCalendarEvents,
   monthGrid,
@@ -103,10 +105,11 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
     setSelectedDate("");
   }
 
-  function toggleKind(kind: CalendarEventKind) {
+  function toggleGroup(group: (typeof CALENDAR_KIND_GROUPS)[number]) {
     setKinds((current) => {
       const next = new Set(current);
-      if (next.has(kind)) next.delete(kind); else next.add(kind);
+      const enabled = group.kinds.every((kind) => next.has(kind));
+      group.kinds.forEach((kind) => enabled ? next.delete(kind) : next.add(kind));
       return next;
     });
   }
@@ -115,18 +118,15 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
     <div className="app-shell">
       {navigation}
       <main className="calendar-page">
-        <header className="phase5-heading">
-          <div><span>MY SCHEDULE</span><h1>캘린더</h1><p>{timezone} 기준으로 확인된 일정만 표시해요.</p></div>
-          <div className="calendar-heading-actions"><button className="google-calendar-link" type="button" onClick={() => navigate("/settings")}>Google Calendar · {googleStatus?.status === "connected" ? "연결됨" : googleStatus?.status === "sync_delayed" ? "동기화 지연" : googleStatus?.status === "reauth_required" ? "재연결 필요" : "연결 설정"}</button><button className="button secondary" type="button" onClick={() => { const today = todayInTimeZone(timezone); setAnchor(today); setSelectedDate(today); }}>오늘</button></div>
-        </header>
+        <PageHeader eyebrow="캘린더" title="캘린더" description="결제와 만료 일정을 날짜별로 확인하세요." actions={<div className="calendar-heading-actions"><button className="google-calendar-link" type="button" onClick={() => navigate("/settings")}>Google Calendar · {googleStatus?.status === "connected" ? "연결됨" : googleStatus?.status === "sync_delayed" ? "동기화 지연" : googleStatus?.status === "reauth_required" ? "재연결 필요" : "연결 설정"}</button><button className="button secondary" type="button" onClick={() => { const today = todayInTimeZone(timezone); setAnchor(today); setSelectedDate(today); }}>오늘</button></div>} />
 
         <section className="calendar-toolbar" aria-label="캘린더 보기와 필터">
           <div className="view-tabs">{(["month", "week", "list"] as View[]).map((value) => <button type="button" key={value} className={view === value ? "active" : ""} onClick={() => setView(value)}>{value === "month" ? "월간" : value === "week" ? "주간" : "목록"}</button>)}</div>
-          <div className="kind-filters">{KINDS.map((kind) => <button type="button" key={kind} className={kinds.has(kind) ? `active kind-${kind}` : ""} aria-pressed={kinds.has(kind)} onClick={() => toggleKind(kind)}>{CALENDAR_KIND_LABELS[kind]}</button>)}</div>
+          <div className="kind-filters" aria-label="일정 그룹 필터">{CALENDAR_KIND_GROUPS.map((group) => { const active = group.kinds.every((kind) => kinds.has(kind)); const partial = !active && group.kinds.some((kind) => kinds.has(kind)); return <button type="button" key={group.key} className={active ? "active" : partial ? "partial" : ""} aria-pressed={active} onClick={() => toggleGroup(group)}>{group.label}</button>; })}</div>
         </section>
 
         <section className="full-calendar-card">
-          <div className="calendar-period-heading"><button type="button" aria-label="이전 기간" onClick={() => move(-1)}>‹</button><h2>{title}</h2><button type="button" aria-label="다음 기간" onClick={() => move(1)}>›</button></div>
+          <div className="calendar-period-heading"><button type="button" aria-label="이전 기한" onClick={() => move(-1)}>‹</button><h2>{title}</h2><button type="button" aria-label="다음 기한" onClick={() => move(1)}>›</button></div>
           {loading ? <div className="phase5-state">캘린더를 불러오는 중…</div> : error ? <div className="phase5-state error">{error}</div> : view === "list" ? (
             <div className="calendar-list">{events.length ? events.map((event) => <div className="calendar-list-row" key={event.key}><time>{event.date.replaceAll("-", ".")}</time><EventButton event={event} /></div>) : <div className="phase5-state">선택한 조건의 앞으로 일정이 없어요.</div>}</div>
           ) : (

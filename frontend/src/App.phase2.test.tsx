@@ -111,7 +111,7 @@ describe("Phase 2 account screens", () => {
       screen.getByRole("heading", { name: "기프티콘 등록" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("사용처")).toBeInTheDocument();
-    expect(screen.getByLabelText("유효기간 정밀도")).toBeInTheDocument();
+    expect(screen.getByLabelText("유효기한 정밀도")).toBeInTheDocument();
     expect(screen.getByLabelText("사용 상태")).toBeInTheDocument();
     expect(screen.queryByLabelText("결제 주기")).not.toBeInTheDocument();
   });

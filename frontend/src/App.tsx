@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
-import brandIcon from "./assets/figma/brand-calendar.svg";
+import ailenMascot from "./assets/brand/ailen_remove_bg.png";
+import moonMascot from "./assets/brand/moon_remove_bg.png";
 import circleCheckIcon from "./assets/figma/circle-check.svg";
 import infoIcon from "./assets/figma/info.svg";
 import mailCheckIcon from "./assets/figma/mail-check.svg";
@@ -29,8 +30,12 @@ import { NotificationsPage } from "./phase5/NotificationsPage";
 import { ReportPage } from "./phase6/ReportPage";
 import { GoogleCalendarSettings } from "./phase7/GoogleCalendarSettings";
 import { NewsPage, OperationsPage, ScrapsPage } from "./phase8/Phase8Pages";
+import { PageHeader } from "./components/ui";
 import "./styles.css";
 import "./page-layout.css";
+import "./brand-refresh.css";
+import "./layout-redesign.css";
+import "./glass-unified.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 type Profile = {
@@ -149,11 +154,11 @@ function AppLink({
 
 function Logo() {
   return (
-    <AppLink to="/" className="brand" ariaLabel="subscribe-manager 홈">
-      <span className="brand-mark">
-        <img src={brandIcon} alt="" />
+    <AppLink to="/" className="brand" ariaLabel="달리 홈">
+      <span className="brand-mark" aria-hidden="true">
+        <img src={moonMascot} alt="" />
       </span>
-      <span>subscribe-manager</span>
+      <span className="brand-name"><b>달</b><b>리</b></span>
     </AppLink>
   );
 }
@@ -229,6 +234,10 @@ function AuthShell({
     <main className="auth-page">
       <PublicHeader />
       <section className="auth-content">
+        <div className="auth-mascots" aria-hidden="true">
+          <img src={moonMascot} alt="" />
+          <img src={ailenMascot} alt="" />
+        </div>
         <div className={`auth-flow${wide ? " auth-flow-wide" : ""}`}>
           <header className="page-title">
             <h1>{title}</h1>
@@ -806,31 +815,43 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
 
   const activeForLabel = (label: string) =>
     label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : label === "소식" ? "news" : "settings";
+  const navigationLinks = (className: string) => (
+    <nav className={className} aria-label="주요 메뉴">
+      {navItems.map(([label, icon, path]) => (
+        <AppLink
+          key={label}
+          to={path}
+          className={active === activeForLabel(label) ? "active" : undefined}
+        >
+          <span className="nav-icon"><img src={icon} alt="" /></span>
+          <span>{label}</span>
+        </AppLink>
+      ))}
+    </nav>
+  );
   return (
     <>
-      <header className="app-header">
+      <aside className="app-sidebar">
+        <div className="sidebar-brand"><Logo /><small>달마다 돌아오는 구독 · 기한 관리</small></div>
+        {navigationLinks("sidebar-nav")}
+        <div className="sidebar-footer">
+          <AppLink
+            to="/notifications"
+            className={`sidebar-notification${active === "notifications" ? " active" : ""}`}
+            ariaLabel="알림"
+          >
+            <span className="nav-icon"><img src={notificationIcon} alt="" /></span>
+            <span>알림</span>
+            {unreadCount ? <b>{unreadCount > 99 ? "99+" : unreadCount}</b> : null}
+          </AppLink>
+          <div className="sidebar-account">
+            <span aria-hidden="true">{session?.user.email?.slice(0, 1).toUpperCase() || "D"}</span>
+            <div><strong>내 계정</strong><small>{session?.user.email}</small></div>
+          </div>
+        </div>
+      </aside>
+      <header className="app-header mobile-app-header">
         <Logo />
-        <nav className="desktop-nav" aria-label="주요 메뉴">
-          {navItems.map(([label, icon, path]) =>
-            path ? (
-              <AppLink
-                key={label}
-                to={path}
-                className={
-                  active === activeForLabel(label) ? "active" : undefined
-                }
-              >
-                <img src={icon} alt="" />
-                {label}
-              </AppLink>
-            ) : (
-              <span key={label} aria-disabled="true">
-                <img src={icon} alt="" />
-                {label}
-              </span>
-            ),
-          )}
-        </nav>
         <AppLink
           to="/notifications"
           className={`notification-button${active === "notifications" ? " active" : ""}`}
@@ -840,27 +861,7 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
           {unreadCount ? <span className="notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
         </AppLink>
       </header>
-      <nav className="bottom-nav" aria-label="모바일 주요 메뉴">
-        {navItems.map(([label, icon, path]) =>
-          path ? (
-            <AppLink
-              key={label}
-              to={path}
-              className={
-                active === activeForLabel(label) ? "active" : undefined
-              }
-            >
-              <img src={icon} alt="" />
-              <span>{label}</span>
-            </AppLink>
-          ) : (
-            <span key={label} aria-disabled="true">
-              <img src={icon} alt="" />
-              <span>{label}</span>
-            </span>
-          ),
-        )}
-      </nav>
+      {navigationLinks("bottom-nav")}
     </>
   );
 }
@@ -1972,10 +1973,7 @@ function SettingsPage() {
     <div className="app-shell settings-shell">
       <AppNavigation active="settings" />
       <main className="settings-page">
-        <header className="settings-title">
-          <h1>사용자 기본 설정</h1>
-          <p>내 계정과 구독 관리의 기본값을 확인하세요.</p>
-        </header>
+        <PageHeader eyebrow="설정" title="사용자 기본 설정" description="계정과 알림 환경을 관리하세요." actions={<span className="page-header-context">내 계정</span>} />
         <NoticeBox notice={notice} />
         <form onSubmit={save} className="settings-layout">
           <section className="settings-card settings-primary">

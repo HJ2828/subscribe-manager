@@ -22,6 +22,8 @@ import {
   retargetImageDraft,
   type ImageExtraction,
 } from "./imageDraft";
+import { PageHeader } from "../components/ui";
+import navListIcon from "../assets/figma/nav-list.svg";
 import "./phase4.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -537,15 +539,12 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
     <div className="app-shell items-shell">
       {navigation}
       <main className="phase4-page phase3-page image-library-page">
-        <header className="items-title">
-          <h1>이미지 관리</h1>
-          <p>보관 중인 원본을 확인하고 휴지통으로 이동하거나 복원할 수 있어요.</p>
-        </header>
-        <div className="items-actions">
-          <Link to="/items" className="button secondary">
-            관리 목록
-          </Link>
-        </div>
+        <PageHeader
+          eyebrow="이미지 보관"
+          title="이미지 관리"
+          description="보관 중인 이미지를 확인할 수 있어요."
+          actions={<div className="items-actions"><Link to="/items" className="button secondary"><img className="button-icon" src={navListIcon} alt="" />전체 목록</Link></div>}
+        />
         {notice ? (
           <div className={`notice ${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}>
             {notice.text}
@@ -576,6 +575,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
             현재 탭 {assets.length}개 · {formatBytes(totalSize)}
           </p>
         </section>
+        {tab === "trash" ? <div className="trash-retention-notice" role="note"><strong>이미지를 복원할 수 있습니다.</strong><span>30일이 지나면 자동으로 영구 삭제됩니다.</span></div> : null}
         {loading ? (
           <section className="phase4-card image-library-empty">이미지를 불러오는 중…</section>
         ) : assets.length ? (
@@ -637,7 +637,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                   ) : (
                     <button
                       type="button"
-                      className="button secondary"
+                      className="button secondary image-trash-button"
                       disabled={busyId === asset.id}
                       onClick={() => changeState(asset, "trash")}
                     >

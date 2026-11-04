@@ -4,6 +4,8 @@ import {
   buildManagedItemPayload,
   createEmptyDraft,
   displayDate,
+  formatDday,
+  isPastDate,
   isTargetDateExpired,
   itemStatusValue,
   proposeNextRecurringDate,
@@ -51,6 +53,31 @@ describe("Phase 3 date precision", () => {
         new Date("2025-01-01T00:00:00Z"),
       ),
     ).toBe("2025-02-28");
+  });
+});
+
+describe("Phase 3 D-day labels", () => {
+  const now = new Date(2026, 10, 4);
+
+  it("uses the design-system ranges for upcoming dates", () => {
+    expect(formatDday("2026-11-04", "day", now)).toEqual({ label: "D-day", tone: "urgent" });
+    expect(formatDday("2026-11-07", "day", now)).toEqual({ label: "D-3", tone: "urgent" });
+    expect(formatDday("2026-11-11", "day", now)).toEqual({ label: "D-7", tone: "soon" });
+    expect(formatDday("2026-11-12", "day", now)).toEqual({ label: "D-8", tone: "normal" });
+  });
+
+  it("shows past dates as D+ and omits imprecise dates", () => {
+    expect(formatDday("2026-09-13", "day", now)).toEqual({ label: "D+52", tone: "ended" });
+    expect(formatDday("2026-11", "month", now)).toBeNull();
+    expect(formatDday(null, "day", now)).toBeNull();
+  });
+
+  it("identifies past day and month values for the list visibility filter", () => {
+    expect(isPastDate("2026-11-03", "day", now)).toBe(true);
+    expect(isPastDate("2026-11-04", "day", now)).toBe(false);
+    expect(isPastDate("2026-10", "month", now)).toBe(true);
+    expect(isPastDate("2026-11", "month", now)).toBe(false);
+    expect(isPastDate(null, "day", now)).toBe(false);
   });
 });
 

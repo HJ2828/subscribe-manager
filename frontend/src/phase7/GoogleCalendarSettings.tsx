@@ -8,16 +8,10 @@ import {
   updateGoogleCalendarEventTypes,
   type GoogleCalendarStatus,
 } from "../lib/api";
+import { CALENDAR_KIND_GROUPS, type CalendarEventKind } from "../phase5/calendarModel";
 import "./phase7.css";
 
-const EVENT_TYPES = [
-  ["payment", "결제"],
-  ["renewal", "갱신"],
-  ["cancellation", "해지 마감"],
-  ["review", "검토"],
-  ["expiry", "만료"],
-  ["warranty", "보장 종료"],
-] as const;
+const EVENT_TYPES = CALENDAR_KIND_GROUPS;
 
 export function GoogleCalendarSettings({ accessToken }: { accessToken: string }) {
   const [status, setStatus] = useState<GoogleCalendarStatus | null>(null);
@@ -118,7 +112,7 @@ export function GoogleCalendarSettings({ accessToken }: { accessToken: string })
       ) : connected ? (
         <>
           <div className="google-calendar-summary"><span>전용 캘린더</span><strong>{status.calendar_name}</strong><small>{status.last_sync_at ? `마지막 동기화 ${new Date(status.last_sync_at).toLocaleString("ko-KR")}` : "아직 동기화 기록이 없어요."}</small></div>
-          <fieldset className="google-event-types"><legend>내보낼 일정 종류</legend>{EVENT_TYPES.map(([value, label]) => <label key={value}><input type="checkbox" checked={selected.includes(value)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, value] : current.filter((item) => item !== value))} />{label}</label>)}</fieldset>
+          <fieldset className="google-event-types"><legend>내보낼 일정 종류</legend><p className="google-event-types-help">비슷한 일정은 한 그룹으로 선택할 수 있어요.</p>{EVENT_TYPES.map((group) => { const selectedKinds = group.kinds.filter((kind) => selected.includes(kind)); const checked = selectedKinds.length === group.kinds.length; const partial = selectedKinds.length > 0 && !checked; return <label key={group.key} className={partial ? "partial" : ""}><input type="checkbox" checked={checked} aria-checked={partial ? "mixed" : checked} onChange={(event) => setSelected((current) => { const next = new Set(current); group.kinds.forEach((kind: CalendarEventKind) => event.target.checked ? next.add(kind) : next.delete(kind)); return [...next]; })} />{group.label}</label>; })}</fieldset>
           <div className="google-actions"><button type="button" className="button secondary" disabled={busy || !selected.length} onClick={() => runSync(() => updateGoogleCalendarEventTypes(accessToken, selected), "내보낼 일정 종류를 저장하고 동기화했어요.")}>종류 저장</button><button type="button" className="button secondary" disabled={busy} onClick={() => runSync(() => syncGoogleCalendar(accessToken), "Google Calendar 동기화를 완료했어요.")}>지금 동기화</button><button type="button" className="text-danger" disabled={busy} onClick={() => setDisconnecting(true)}>연결 해제</button></div>
           {disconnecting ? <div className="google-disconnect" role="dialog" aria-label="Google Calendar 연결 해제"><strong>내보낸 Google 일정을 어떻게 할까요?</strong><p>어느 쪽을 선택해도 연결 토큰과 자동 동기화는 중단됩니다.</p><div><button type="button" className="button danger" disabled={busy} onClick={() => disconnect(true)}>일정 삭제 후 해제</button><button type="button" className="button secondary" disabled={busy} onClick={() => disconnect(false)}>일정 유지하고 해제</button><button type="button" className="button ghost" onClick={() => setDisconnecting(false)}>취소</button></div></div> : null}
           <p className="google-calendar-note">Google에서 직접 수정한 내용은 앱으로 가져오지 않으며 다음 동기화에서 내부 값으로 다시 반영될 수 있어요. Google 자체 알림은 앱 알림과 중복될 수 있습니다.</p>

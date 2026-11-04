@@ -21,6 +21,8 @@ import {
   type ImageExtraction,
 } from "../phase4/imageDraft";
 import { ItemSupportContent } from "../phase8/Phase8Pages";
+import { PageHeader } from "../components/ui";
+import galleryIcon from "../assets/figma/gallery.svg";
 import {
   CATEGORY_OPTIONS,
   TYPE_OPTIONS,
@@ -29,6 +31,8 @@ import {
   createEmptyDraft,
   dateInputType,
   displayDate,
+  formatDday,
+  isPastDate,
   itemStatusValue,
   isMoneyType,
   isPaymentScheduleType,
@@ -186,7 +190,7 @@ function statusLabel(item: ManagedItem) {
       unused: "미사용",
       used: "사용 완료",
       ended: "종료",
-      expired: "기간 만료",
+      expired: "기한 만료",
       needs_review: "확인 필요",
       in_use: "이용 중",
       temporarily_paused: "일시 중지",
@@ -200,6 +204,27 @@ function itemDate(item: ManagedItem) {
     item.target_date_value || item.next_billing_date,
     item.target_date_precision || (item.next_billing_date ? "day" : null),
   );
+}
+
+function ItemDdayBadge({ item }: { item: ManagedItem }) {
+  const value = item.target_date_value || item.next_billing_date;
+  const precision = item.target_date_value
+    ? item.target_date_precision
+    : item.next_billing_date
+      ? "day"
+      : null;
+  const dday = formatDday(value, precision);
+  return dday ? <span className={`item-row-dday ${dday.tone}`}>{dday.label}</span> : null;
+}
+
+function itemHasPastDate(item: ManagedItem) {
+  const value = item.target_date_value || item.next_billing_date;
+  const precision = item.target_date_value
+    ? item.target_date_precision
+    : item.next_billing_date
+      ? "day"
+      : null;
+  return isPastDate(value, precision);
 }
 
 function isDueMatch(item: ManagedItem, filter: string) {
@@ -225,11 +250,13 @@ function isDueMatch(item: ManagedItem, filter: string) {
 export function Phase3ListPage({ navigation }: PageProps) {
   const { client, session } = useAuth();
   const [items, setItems] = useState<ManagedItem[]>([]);
+  const [imageItemIds, setImageItemIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"all" | ManagementType>("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
+  const [hidePastDates, setHidePastDates] = useState(true);
   const [support, setSupport] = useState<"all" | SupportScope>("all");
   const [sort, setSort] = useState("date");
   const [loading, setLoading] = useState(true);
@@ -243,19 +270,18 @@ export function Phase3ListPage({ navigation }: PageProps) {
   useEffect(() => {
     if (!client || !session) return;
     let active = true;
-    client
-      .from("items")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
+    Promise.all([
+      client.from("items").select("*").eq("user_id", session.user.id).order("created_at", { ascending: false }),
+      client.from("image_assets").select("item_id,lifecycle_status").eq("user_id", session.user.id).eq("lifecycle_status", "active").not("item_id", "is", null),
+    ]).then(([itemsResult, imagesResult]) => {
         if (!active) return;
-        if (error)
+        if (itemsResult.error)
           setNotice({
             tone: "error",
             text: "관리 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           });
-        const loaded = (data || []) as ManagedItem[];
+        const loaded = (itemsResult.data || []) as ManagedItem[];
+        setImageItemIds(new Set((imagesResult.data || []).map((image) => image.item_id).filter(Boolean) as string[]));
         const expiredIds = loaded
           .filter(
             (item) =>
@@ -300,6 +326,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
             (category === "all" || item.category === category) &&
             (status === "all" || currentStatus === status) &&
             isDueMatch(item, dateFilter) &&
+            (!hidePastDates || !itemHasPastDate(item)) &&
             (support === "all" || item.support_scope === support)
           );
         })
@@ -309,7 +336,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
           if (sort === "amount") return (b.amount ?? -1) - (a.amount ?? -1);
           return targetSortValue(a).localeCompare(targetSortValue(b));
         }),
-    [items, query, type, category, status, dateFilter, support, sort],
+    [items, query, type, category, status, dateFilter, hidePastDates, support, sort],
   );
 
   if (loading) return <PageLoading label="관리 목록을 불러오는 중" />;
@@ -317,34 +344,15 @@ export function Phase3ListPage({ navigation }: PageProps) {
     <div className="app-shell items-shell">
       {navigation}
       <main className="items-page phase3-page">
-        <header className="items-title">
-          <h1>관리 목록</h1>
-          <p>구독부터 생활 기한까지, 등록한 항목을 함께 관리하세요.</p>
-          <small>
-            기준 ·{" "}
-            {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(
-              new Date(),
-            )}
-          </small>
-        </header>
-        <div className="items-actions">
-          <Link to="/items/new" className="button primary">
-            ＋ 직접 등록
-          </Link>
-          <Link to="/images" className="button secondary">
-            이미지 관리
-          </Link>
-        </div>
+        <PageHeader eyebrow="내 관리 항목" title="구독과 생활 기한" description="구독과 생활 기한을 한곳에서 관리하세요." actions={<div className="items-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
         <NoticeBox notice={notice} />
         <section className="filter-card phase3-filter">
-          <Field id="item-search" label="이름 검색">
-            <input
-              id="item-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="이름, 사용처, 카테고리 검색"
-            />
-          </Field>
+          <div className="filter-card-header">
+            <Field id="item-search" label="항목 검색">
+              <input id="item-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="서비스명, 사용처 또는 카테고리" />
+            </Field>
+            <button type="button" className="filter-reset" onClick={() => { setQuery(""); setType("all"); setCategory("all"); setStatus("all"); setDateFilter("all"); setHidePastDates(true); setSupport("all"); setSort("date"); }}>필터 초기화</button>
+          </div>
           <div className="filter-grid">
             <label>
               <span>유형</span>
@@ -388,7 +396,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
                 <option value="unused">미사용</option>
                 <option value="used">사용 완료</option>
                 <option value="active">유효</option>
-                <option value="expired">기간 만료</option>
+                <option value="expired">기한 만료</option>
                 <option value="needs_review">확인 필요</option>
               </select>
             </label>
@@ -396,7 +404,11 @@ export function Phase3ListPage({ navigation }: PageProps) {
               <span>날짜</span>
               <select
                 value={dateFilter}
-                onChange={(event) => setDateFilter(event.target.value)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setDateFilter(value);
+                  if (value === "past") setHidePastDates(false);
+                }}
               >
                 <option value="all">날짜 전체</option>
                 <option value="next30">30일 이내</option>
@@ -436,9 +448,10 @@ export function Phase3ListPage({ navigation }: PageProps) {
           <div className="items-card-heading">
             <div>
               <h2>전체 항목 · {filtered.length}건</h2>
-              <p>
-                확인된 값만 표시하며, 날짜·금액 미확인은 정렬 뒤에 표시해요.
-              </p>
+            </div>
+            <div className="items-card-tools">
+              <label className="items-hide-expired"><input type="checkbox" checked={hidePastDates} onChange={(event) => setHidePastDates(event.target.checked)} /> 만료 기한 숨기기</label>
+              <small className="items-image-legend"><i aria-hidden="true" /> 이미지 저장한 항목</small>
             </div>
           </div>
           {filtered.length ? (
@@ -448,10 +461,12 @@ export function Phase3ListPage({ navigation }: PageProps) {
               aria-label="관리 항목 목록"
             >
               <div className="items-table-head" role="row">
+                <span>D-day</span>
                 <span>이름 / 유형</span>
                 <span>금액 / 단위</span>
                 <span>기한</span>
                 <span>상태</span>
+                <span aria-hidden="true" />
               </div>
               {filtered.map((item) => (
                 <button
@@ -460,18 +475,19 @@ export function Phase3ListPage({ navigation }: PageProps) {
                   className="item-row"
                   onClick={() => navigate(`/items/${item.id}`)}
                 >
-                  <span>
-                    <strong>{item.service_name || "이름 확인 필요"}</strong>
-                    <small>
-                      {typeLabel(item.management_type, true)} ·{" "}
-                      {item.category || "카테고리 미정"}
-                    </small>
+                  <span className="item-row-dday-cell"><ItemDdayBadge item={item} /></span>
+                  <span className="item-row-name">
+                    <span className="item-row-copy">
+                      <span className="item-row-title"><i className="item-row-icon" aria-hidden="true">{item.service_name.trim().slice(0, 1).toUpperCase() || "?"}</i><strong>{item.service_name || "이름 확인 필요"}</strong>{imageItemIds.has(item.id) ? <i className="item-image-dot" aria-label="이미지 저장됨" /> : null}</span>
+                      <small>{typeLabel(item.management_type, true)} · {item.category || "카테고리 미정"}</small>
+                    </span>
                   </span>
                   <strong>{formatAmount(item)}</strong>
                   <span>{itemDate(item)}</span>
                   <em data-status={itemStatusValue(item)}>
                     {statusLabel(item)}
                   </em>
+                  <span className="item-row-arrow" aria-hidden="true">›</span>
                 </button>
               ))}
             </div>
@@ -780,7 +796,7 @@ function TypeSpecificFields({
               : warranty
                 ? "종료일"
                 : consumable
-                  ? "유효기간"
+                  ? "유효기한"
                   : points
                     ? "만료일"
                     : "날짜"
@@ -856,7 +872,7 @@ function TypeSpecificFields({
           >
             <option value="active">유효</option>
             <option value="ended">종료</option>
-            <option value="expired">기간 만료</option>
+            <option value="expired">기한 만료</option>
             <option value="needs_review">확인 필요</option>
           </select>
         </Field>
@@ -1365,18 +1381,7 @@ export function Phase3FormPage({
     <div className="app-shell items-shell">
       {navigation}
       <main className="subscription-page phase3-page">
-        <header className="items-title">
-          <h1>{title}</h1>
-          <p>
-            확인한 정보만 입력하세요. 모르는 금액과 날짜는 비워 둘 수 있어요.
-          </p>
-          <small>
-            기준 ·{" "}
-            {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(
-              new Date(),
-            )}
-          </small>
-        </header>
+        <PageHeader className="form-page-heading" eyebrow={editing ? "항목 수정" : "새 항목"} title={title} description="확인한 정보부터 입력하세요. 모르는 금액과 날짜는 비워 둘 수 있어요." />
         <NoticeBox notice={notice} />
         <form onSubmit={save} className="subscription-layout">
           <section className="subscription-main">
@@ -1830,43 +1835,7 @@ export function Phase3DetailPage({
     <div className="app-shell items-shell">
       {navigation}
       <main className="detail-page phase3-page">
-        <header className="items-title">
-          <h1>{recurring ? "구독 상세" : "생활 기한 상세"}</h1>
-          <p>
-            {item.service_name || "이름 확인 필요"} ·{" "}
-            {typeLabel(item.management_type, true)}
-          </p>
-          <small>
-            기준 ·{" "}
-            {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(
-              new Date(),
-            )}
-          </small>
-        </header>
-        <div className="items-actions">
-          {canMarkUsed(item.management_type) &&
-          item.lifecycle_status !== "used" ? (
-            <button
-              type="button"
-              className="button primary"
-              onClick={markUsed}
-              disabled={completing}
-            >
-              {completing ? "저장 중" : "사용 완료"}
-            </button>
-          ) : null}
-          <Link to={`/items/${item.id}/edit`} className="button secondary">
-            수정
-          </Link>
-          <button
-            type="button"
-            className="button secondary danger-text"
-            onClick={() => setDeleteConfirm((value) => !value)}
-            disabled={deleting}
-          >
-            삭제
-          </button>
-        </div>
+        <PageHeader className="detail-page-heading" eyebrow={`${recurring ? "구독" : "생활 기한"} · ${typeLabel(item.management_type, true)}`} title={item.service_name || "이름 확인 필요"} description={item.plan_name || item.provider_name || "등록한 핵심 정보와 연결 상태를 확인하세요."} actions={<div className="items-actions">{canMarkUsed(item.management_type) && item.lifecycle_status !== "used" ? <button type="button" className="button primary" onClick={markUsed} disabled={completing}>{completing ? "저장 중" : "사용 완료"}</button> : null}<Link to={`/items/${item.id}/edit`} className="button secondary">수정</Link><button type="button" className="button secondary danger-text" onClick={() => setDeleteConfirm((value) => !value)} disabled={deleting}>삭제</button></div>} />
         <NoticeBox notice={notice} />
         {deleteConfirm ? (
           <section
