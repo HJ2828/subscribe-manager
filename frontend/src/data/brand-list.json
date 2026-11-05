@@ -1,0 +1,2042 @@
+[
+  {
+    "domain": "netflix.com",
+    "aliases": [
+      "넷플릭스",
+      "넷플",
+      "netflix",
+      "넷플릭스프리미엄",
+      "넷플릭스 프리미엄",
+      "넷플 프리미엄"
+    ]
+  },
+  {
+    "domain": "tving.com",
+    "aliases": [
+      "티빙",
+      "tving"
+    ]
+  },
+  {
+    "domain": "coupangplay.com",
+    "aliases": [
+      "쿠팡플레이",
+      "쿠플",
+      "coupang play",
+      "쿠팡플"
+    ]
+  },
+  {
+    "domain": "wavve.com",
+    "aliases": [
+      "웨이브",
+      "wavve",
+      "웨이브 프리미엄",
+      "웨이브 이용권"
+    ]
+  },
+  {
+    "domain": "disneyplus.com",
+    "aliases": [
+      "디즈니플러스",
+      "디즈니+",
+      "디플",
+      "disneyplus"
+    ]
+  },
+  {
+    "domain": "watcha.com",
+    "aliases": [
+      "왓챠",
+      "watcha"
+    ]
+  },
+  {
+    "domain": "youtube.com",
+    "aliases": [
+      "유튜브",
+      "유튜브프리미엄",
+      "youtube",
+      "유튜브 프리미엄"
+    ]
+  },
+  {
+    "domain": "melon.com",
+    "aliases": [
+      "멜론",
+      "melon"
+    ]
+  },
+  {
+    "domain": "genie.co.kr",
+    "aliases": [
+      "지니뮤직",
+      "지니",
+      "genie"
+    ]
+  },
+  {
+    "domain": "bugs.co.kr",
+    "aliases": [
+      "벅스",
+      "벅스뮤직",
+      "bugs"
+    ]
+  },
+  {
+    "domain": "music-flo.com",
+    "aliases": [
+      "플로",
+      "flo"
+    ]
+  },
+  {
+    "domain": "vibe.naver.com",
+    "aliases": [
+      "바이브",
+      "vibe"
+    ]
+  },
+  {
+    "domain": "spotify.com",
+    "aliases": [
+      "스포티파이",
+      "spotify"
+    ]
+  },
+  {
+    "domain": "millie.co.kr",
+    "aliases": [
+      "밀리의서재",
+      "밀리",
+      "millie",
+      "밀리의 서재 구독",
+      "밀리의서재 정기구독"
+    ]
+  },
+  {
+    "domain": "ridibooks.com",
+    "aliases": [
+      "리디북스",
+      "리디",
+      "ridi",
+      "ridibooks",
+      "리디셀렉트",
+      "리디 셀렉트"
+    ]
+  },
+  {
+    "domain": "coupang.com",
+    "aliases": [
+      "쿠팡",
+      "쿠팡와우",
+      "와우멤버십",
+      "coupang"
+    ]
+  },
+  {
+    "domain": "naver.com",
+    "aliases": [
+      "네이버",
+      "네이버플러스",
+      "네이버멤버십",
+      "네이버페이",
+      "네페",
+      "naver"
+    ]
+  },
+  {
+    "domain": "kurly.com",
+    "aliases": [
+      "컬리",
+      "마켓컬리",
+      "kurly"
+    ]
+  },
+  {
+    "domain": "starbucks.co.kr",
+    "aliases": [
+      "스타벅스",
+      "스벅",
+      "starbucks",
+      "스타벅스커피",
+      "스타벅스쿠폰",
+      "스타벅스 쿠폰",
+      "스벅쿠폰",
+      "스벅 쿠폰",
+      "스타벅스기프티콘",
+      "스타벅스 기프티콘",
+      "스타벅스 상품권",
+      "스타벅스 교환권"
+    ]
+  },
+  {
+    "domain": "twosome.co.kr",
+    "aliases": [
+      "투썸플레이스",
+      "투썸",
+      "twosome"
+    ]
+  },
+  {
+    "domain": "megabgc.com",
+    "aliases": [
+      "메가커피",
+      "메가MGC커피",
+      "메가mgc",
+      "메가"
+    ]
+  },
+  {
+    "domain": "composecoffee.com",
+    "aliases": [
+      "컴포즈커피",
+      "컴포즈",
+      "compose"
+    ]
+  },
+  {
+    "domain": "paikdabang.com",
+    "aliases": [
+      "빽다방",
+      "빽다방커피"
+    ]
+  },
+  {
+    "domain": "ediya.com",
+    "aliases": [
+      "이디야",
+      "이디야커피",
+      "ediya"
+    ]
+  },
+  {
+    "domain": "hollys.co.kr",
+    "aliases": [
+      "할리스",
+      "할리스커피",
+      "hollys"
+    ]
+  },
+  {
+    "domain": "gong-cha.co.kr",
+    "aliases": [
+      "공차",
+      "gongcha"
+    ]
+  },
+  {
+    "domain": "baskinrobbins.co.kr",
+    "aliases": [
+      "배스킨라빈스",
+      "베스킨라빈스",
+      "배라",
+      "베라",
+      "baskinrobbins"
+    ]
+  },
+  {
+    "domain": "sulbing.com",
+    "aliases": [
+      "설빙",
+      "sulbing",
+      "인절미설빙"
+    ]
+  },
+  {
+    "domain": "mcdonalds.co.kr",
+    "aliases": [
+      "맥도날드",
+      "맥날",
+      "mcdonalds"
+    ]
+  },
+  {
+    "domain": "burgerking.co.kr",
+    "aliases": [
+      "버거킹",
+      "burgerking"
+    ]
+  },
+  {
+    "domain": "lotteria.com",
+    "aliases": [
+      "롯데리아",
+      "lotteria"
+    ]
+  },
+  {
+    "domain": "kfc.co.kr",
+    "aliases": [
+      "kfc",
+      "케이에프씨"
+    ]
+  },
+  {
+    "domain": "baemin.com",
+    "aliases": [
+      "배달의민족",
+      "배민",
+      "배민원",
+      "배달의 민족",
+      "baemin",
+      "배달의민족 쿠폰",
+      "배달의 민족 쿠폰",
+      "배민 쿠폰"
+    ]
+  },
+  {
+    "domain": "yogiyo.co.kr",
+    "aliases": [
+      "요기요",
+      "yogiyo"
+    ]
+  },
+  {
+    "domain": "dominos.co.kr",
+    "aliases": [
+      "도미노피자",
+      "도미노",
+      "dominos"
+    ]
+  },
+  {
+    "domain": "pizzahut.co.kr",
+    "aliases": [
+      "피자헛",
+      "pizzahut"
+    ]
+  },
+  {
+    "domain": "samsung.com",
+    "aliases": [
+      "삼성",
+      "삼성전자",
+      "samsung",
+      "애니콜"
+    ]
+  },
+  {
+    "domain": "lge.co.kr",
+    "aliases": [
+      "lg",
+      "lg전자",
+      "엘지",
+      "엘지전자",
+      "lg 씽큐",
+      "lgthinq",
+      "thinq"
+    ]
+  },
+  {
+    "domain": "apple.com",
+    "aliases": [
+      "애플",
+      "apple",
+      "아이폰",
+      "맥북",
+      "아이패드",
+      "AppleCare+",
+      "애플케어플러스",
+      "애플케어",
+      "Apple"
+    ]
+  },
+  {
+    "domain": "dyson.co.kr",
+    "aliases": [
+      "다이슨",
+      "dyson"
+    ]
+  },
+  {
+    "domain": "sony.co.kr",
+    "aliases": [
+      "소니",
+      "sony"
+    ]
+  },
+  {
+    "domain": "cuckoo.co.kr",
+    "aliases": [
+      "쿠쿠",
+      "cuckoo"
+    ]
+  },
+  {
+    "domain": "cuchen.com",
+    "aliases": [
+      "쿠첸",
+      "cuchen"
+    ]
+  },
+  {
+    "domain": "skmagic.com",
+    "aliases": [
+      "sk매직",
+      "에스케이매직"
+    ]
+  },
+  {
+    "domain": "coway.com",
+    "aliases": [
+      "코웨이",
+      "coway"
+    ]
+  },
+  {
+    "domain": "chungho.co.kr",
+    "aliases": [
+      "청호나이스",
+      "청호"
+    ]
+  },
+  {
+    "domain": "winix.com",
+    "aliases": [
+      "위닉스",
+      "winix"
+    ]
+  },
+  {
+    "domain": "roborock.co.kr",
+    "aliases": [
+      "로보락",
+      "roborock"
+    ]
+  },
+  {
+    "domain": "mi.com",
+    "aliases": [
+      "샤오미",
+      "mi",
+      "Xiaomi",
+      "미지아"
+    ]
+  },
+  {
+    "domain": "nintendo.co.kr",
+    "aliases": [
+      "닌텐도",
+      "nintendo"
+    ]
+  },
+  {
+    "domain": "playstation.com",
+    "aliases": [
+      "플레이스테이션",
+      "플스",
+      "ps5",
+      "playstation",
+      "플레이스테이션 플러스",
+      "PS Plus"
+    ]
+  },
+  {
+    "domain": "kakaocorp.com",
+    "aliases": [
+      "카카오",
+      "카톡",
+      "카카오톡",
+      "kakao"
+    ]
+  },
+  {
+    "domain": "kakaopay.com",
+    "aliases": [
+      "카카오페이",
+      "카페",
+      "카카오페이상품권",
+      "카카오 선물하기 상품권",
+      "카카오톡 선물하기 상품권"
+    ]
+  },
+  {
+    "domain": "toss.im",
+    "aliases": [
+      "토스",
+      "toss"
+    ]
+  },
+  {
+    "domain": "cjone.com",
+    "aliases": [
+      "cj one",
+      "씨제이원",
+      "cj원",
+      "CJ ONE 포인트",
+      "CJ올리브네트웍스"
+    ]
+  },
+  {
+    "domain": "happypointcard.com",
+    "aliases": [
+      "해피포인트",
+      "해피포"
+    ]
+  },
+  {
+    "domain": "shinsegae.com",
+    "aliases": [
+      "신세계",
+      "신세계백화점",
+      "신세계상품권",
+      "신세계백화점 상품권"
+    ]
+  },
+  {
+    "domain": "ssg.com",
+    "aliases": [
+      "ssg",
+      "쓱",
+      "쓱닷컴",
+      "SSG.COM"
+    ]
+  },
+  {
+    "domain": "emart.com",
+    "aliases": [
+      "이마트",
+      "emart",
+      "신세계이마트",
+      "이마트 금액권",
+      "이마트 트레이더스",
+      "트레이더스",
+      "트레이더스 홀세일 클럽",
+      "TRADERS"
+    ]
+  },
+  {
+    "domain": "lotte.co.kr",
+    "aliases": [
+      "롯데",
+      "롯데백화점",
+      "lotte"
+    ]
+  },
+  {
+    "domain": "gs25.gsretails.com",
+    "aliases": [
+      "gs25",
+      "지에스25",
+      "지에스",
+      "gs편의점",
+      "GS25",
+      "GS 25",
+      "GS편의점"
+    ]
+  },
+  {
+    "domain": "pocketcu.co.kr",
+    "aliases": [
+      "cu",
+      "씨유",
+      "포켓cu",
+      "cu편의점",
+      "CU",
+      "CU편의점",
+      "포켓CU"
+    ]
+  },
+  {
+    "domain": "7-eleven.co.kr",
+    "aliases": [
+      "세븐일레븐",
+      "7eleven",
+      "7-Eleven"
+    ]
+  },
+  {
+    "domain": "oliveyoung.co.kr",
+    "aliases": [
+      "올리브영",
+      "올영",
+      "oliveyoung"
+    ]
+  },
+  {
+    "domain": "primevideo.com",
+    "aliases": [
+      "아마존 프라임 비디오",
+      "프라임비디오",
+      "아마존프라임비디오",
+      "prime video"
+    ]
+  },
+  {
+    "domain": "appletv.com",
+    "aliases": [
+      "애플TV플러스",
+      "애플티비플러스",
+      "Apple TV+",
+      "애플TV"
+    ]
+  },
+  {
+    "domain": "laftel.net",
+    "aliases": [
+      "라프텔",
+      "laftel",
+      "라프텔 프리미엄",
+      "라프텔 멤버십"
+    ]
+  },
+  {
+    "domain": "class101.net",
+    "aliases": [
+      "클래스101",
+      "클래스 101",
+      "class101",
+      "클래스101 구독",
+      "클래스101+",
+      "CLASS101"
+    ]
+  },
+  {
+    "domain": "patreon.com",
+    "aliases": [
+      "패트리온",
+      "patreon"
+    ]
+  },
+  {
+    "domain": "adobe.com",
+    "aliases": [
+      "어도비",
+      "adobe",
+      "포토샵",
+      "프리미어프로",
+      "크리에이티브 클라우드"
+    ]
+  },
+  {
+    "domain": "canva.com",
+    "aliases": [
+      "캔바",
+      "canva",
+      "Canva",
+      "Canva Pro"
+    ]
+  },
+  {
+    "domain": "notion.so",
+    "aliases": [
+      "노션",
+      "notion"
+    ]
+  },
+  {
+    "domain": "dropbox.com",
+    "aliases": [
+      "드롭박스",
+      "dropbox"
+    ]
+  },
+  {
+    "domain": "google.com",
+    "aliases": [
+      "구글원",
+      "구글 원",
+      "google one",
+      "구글 드라이브"
+    ]
+  },
+  {
+    "domain": "microsoft.com",
+    "aliases": [
+      "마이크로소프트365",
+      "오피스365",
+      "Microsoft 365",
+      "원드라이브"
+    ]
+  },
+  {
+    "domain": "icloud.com",
+    "aliases": [
+      "아이클라우드",
+      "icloud"
+    ]
+  },
+  {
+    "domain": "chatgpt.com",
+    "aliases": [
+      "챗지피티 플러스",
+      "챗GPT 플러스",
+      "ChatGPT Plus",
+      "ChatGPT",
+      "챗GPT",
+      "챗지피티"
+    ]
+  },
+  {
+    "domain": "openai.com",
+    "aliases": [
+      "오픈AI",
+      "openai",
+      "OpenAI",
+      "ChatGPT",
+      "챗GPT"
+    ]
+  },
+  {
+    "domain": "perplexity.ai",
+    "aliases": [
+      "퍼플렉시티",
+      "perplexity",
+      "Perplexity",
+      "Perplexity Pro"
+    ]
+  },
+  {
+    "domain": "claude.ai",
+    "aliases": [
+      "클로드",
+      "claude",
+      "Claude",
+      "Claude Pro"
+    ]
+  },
+  {
+    "domain": "duolingo.com",
+    "aliases": [
+      "듀오링고",
+      "duolingo",
+      "듀오링고 플러스",
+      "듀오링고 슈퍼",
+      "Duolingo Super"
+    ]
+  },
+  {
+    "domain": "classu.co.kr",
+    "aliases": [
+      "클래스유",
+      "classu"
+    ]
+  },
+  {
+    "domain": "ringleplus.com",
+    "aliases": [
+      "링글",
+      "ringle"
+    ]
+  },
+  {
+    "domain": "gymbox.co.kr",
+    "aliases": [
+      "짐박스",
+      "GYMBOX"
+    ]
+  },
+  {
+    "domain": "spoany.co.kr",
+    "aliases": [
+      "스포애니",
+      "spoany"
+    ]
+  },
+  {
+    "domain": "megabox.co.kr",
+    "aliases": [
+      "메가박스",
+      "megabox",
+      "메가박스 기프트카드"
+    ]
+  },
+  {
+    "domain": "lottecinema.co.kr",
+    "aliases": [
+      "롯데시네마",
+      "lotte cinema",
+      "롯데시네마 관람권"
+    ]
+  },
+  {
+    "domain": "cgv.co.kr",
+    "aliases": [
+      "CGV",
+      "씨지브이",
+      "CGV 기프트카드"
+    ]
+  },
+  {
+    "domain": "lotteon.com",
+    "aliases": [
+      "롯데온",
+      "lotte on"
+    ]
+  },
+  {
+    "domain": "hmall.com",
+    "aliases": [
+      "현대H몰",
+      "현대홈쇼핑",
+      "H몰"
+    ]
+  },
+  {
+    "domain": "thehyundai.com",
+    "aliases": [
+      "더현대",
+      "현대백화점"
+    ]
+  },
+  {
+    "domain": "gsshop.com",
+    "aliases": [
+      "GS SHOP",
+      "GS샵",
+      "GS홈쇼핑"
+    ]
+  },
+  {
+    "domain": "gmarket.co.kr",
+    "aliases": [
+      "지마켓",
+      "G마켓",
+      "gmarket"
+    ]
+  },
+  {
+    "domain": "11st.co.kr",
+    "aliases": [
+      "11번가",
+      "십일번가",
+      "11st"
+    ]
+  },
+  {
+    "domain": "auction.co.kr",
+    "aliases": [
+      "옥션",
+      "auction"
+    ]
+  },
+  {
+    "domain": "giftishow.com",
+    "aliases": [
+      "기프티쇼",
+      "기프티쇼 비즈"
+    ]
+  },
+  {
+    "domain": "giftcon.nate.com",
+    "aliases": [
+      "기프티콘",
+      "네이트 기프티콘"
+    ]
+  },
+  {
+    "domain": "bcon.co.kr",
+    "aliases": [
+      "비즈콘",
+      "bcon"
+    ]
+  },
+  {
+    "domain": "happyconstore.com",
+    "aliases": [
+      "해피콘",
+      "happycon"
+    ]
+  },
+  {
+    "domain": "cultureland.co.kr",
+    "aliases": [
+      "컬쳐랜드",
+      "문화상품권",
+      "컬쳐캐쉬"
+    ]
+  },
+  {
+    "domain": "booknlife.com",
+    "aliases": [
+      "북앤라이프",
+      "도서문화상품권",
+      "북앤라이프캐시"
+    ]
+  },
+  {
+    "domain": "samsungcard.com",
+    "aliases": [
+      "삼성카드",
+      "삼성카드 포인트"
+    ]
+  },
+  {
+    "domain": "hyundaicard.com",
+    "aliases": [
+      "현대카드",
+      "M포인트",
+      "현대카드 포인트"
+    ]
+  },
+  {
+    "domain": "shinhan.com",
+    "aliases": [
+      "신한카드",
+      "마이신한포인트",
+      "신한포인트"
+    ]
+  },
+  {
+    "domain": "kbcard.com",
+    "aliases": [
+      "KB국민카드",
+      "국민카드",
+      "포인트리"
+    ]
+  },
+  {
+    "domain": "lottecard.co.kr",
+    "aliases": [
+      "롯데카드",
+      "L.POINT",
+      "엘포인트"
+    ]
+  },
+  {
+    "domain": "wooribank.com",
+    "aliases": [
+      "우리카드",
+      "우리WON카드"
+    ]
+  },
+  {
+    "domain": "okcashbag.com",
+    "aliases": [
+      "OK캐쉬백",
+      "오케이캐쉬백",
+      "OK캐시백"
+    ]
+  },
+  {
+    "domain": "pointmall.happypointcard.com",
+    "aliases": [
+      "해피포인트"
+    ]
+  },
+  {
+    "domain": "lpoint.com",
+    "aliases": [
+      "엘포인트",
+      "L포인트"
+    ]
+  },
+  {
+    "domain": "payco.com",
+    "aliases": [
+      "페이코",
+      "PAYCO"
+    ]
+  },
+  {
+    "domain": "zeropay.or.kr",
+    "aliases": [
+      "제로페이",
+      "서울페이플러스",
+      "서울페이"
+    ]
+  },
+  {
+    "domain": "q-net.or.kr",
+    "aliases": [
+      "큐넷",
+      "Q-Net",
+      "국가기술자격",
+      "한국산업인력공단"
+    ]
+  },
+  {
+    "domain": "kpc.or.kr",
+    "aliases": [
+      "한국생산성본부",
+      "KPC자격",
+      "GTQ",
+      "ITQ"
+    ]
+  },
+  {
+    "domain": "license.korcham.net",
+    "aliases": [
+      "대한상공회의소 자격평가사업단",
+      "컴퓨터활용능력",
+      "워드프로세서"
+    ]
+  },
+  {
+    "domain": "hrd.go.kr",
+    "aliases": [
+      "HRD-Net",
+      "고용24 직업훈련",
+      "내일배움카드"
+    ]
+  },
+  {
+    "domain": "kuksiwon.or.kr",
+    "aliases": [
+      "한국보건의료인국가시험원",
+      "국시원"
+    ]
+  },
+  {
+    "domain": "kice.re.kr",
+    "aliases": [
+      "한국교육과정평가원",
+      "수능"
+    ]
+  },
+  {
+    "domain": "korea.kr",
+    "aliases": [
+      "정부24",
+      "정부서비스"
+    ]
+  },
+  {
+    "domain": "samsungcareplus.com",
+    "aliases": [
+      "삼성케어플러스",
+      "Samsung Care+"
+    ]
+  },
+  {
+    "domain": "lg.com",
+    "aliases": [
+      "LG전자",
+      "LG 케어솔루션",
+      "LG전자 케어"
+    ]
+  },
+  {
+    "domain": "sktmembership.co.kr",
+    "aliases": [
+      "T멤버십",
+      "SKT멤버십",
+      "LTE 데이터쿠폰",
+      "SKT 데이터쿠폰"
+    ]
+  },
+  {
+    "domain": "kt.com",
+    "aliases": [
+      "KT멤버십",
+      "KT",
+      "케이티",
+      "KT 데이터쿠폰",
+      "KT 모바일쿠폰"
+    ]
+  },
+  {
+    "domain": "lguplus.com",
+    "aliases": [
+      "LG유플러스",
+      "유플러스 멤버십",
+      "U+멤버십"
+    ]
+  },
+  {
+    "domain": "airbnb.com",
+    "aliases": [
+      "에어비앤비",
+      "airbnb"
+    ]
+  },
+  {
+    "domain": "koreanair.com",
+    "aliases": [
+      "대한항공",
+      "스카이패스",
+      "Korean Air"
+    ]
+  },
+  {
+    "domain": "flyasiana.com",
+    "aliases": [
+      "아시아나항공",
+      "아시아나클럽"
+    ]
+  },
+  {
+    "domain": "lottehotel.com",
+    "aliases": [
+      "롯데호텔",
+      "롯데호텔 리워즈"
+    ]
+  },
+  {
+    "domain": "marriott.com",
+    "aliases": [
+      "메리어트",
+      "Marriott Bonvoy"
+    ]
+  },
+  {
+    "domain": "hilton.com",
+    "aliases": [
+      "힐튼",
+      "Hilton Honors"
+    ]
+  },
+  {
+    "domain": "korail.com",
+    "aliases": [
+      "코레일",
+      "코레일멤버십",
+      "레일플러스"
+    ]
+  },
+  {
+    "domain": "srail.or.kr",
+    "aliases": [
+      "SRT",
+      "에스알티"
+    ]
+  },
+  {
+    "domain": "tmapmobility.com",
+    "aliases": [
+      "티맵",
+      "T맵"
+    ]
+  },
+  {
+    "domain": "socAR.kr",
+    "aliases": [
+      "쏘카",
+      "SOCAR"
+    ]
+  },
+  {
+    "domain": "greencar.co.kr",
+    "aliases": [
+      "그린카",
+      "GREEN CAR"
+    ]
+  },
+  {
+    "domain": "wemixplay.com",
+    "aliases": [
+      "위믹스 플레이"
+    ]
+  },
+  {
+    "domain": "nintendo.com",
+    "aliases": [
+      "닌텐도 온라인",
+      "Nintendo Switch Online"
+    ]
+  },
+  {
+    "domain": "xbox.com",
+    "aliases": [
+      "엑스박스 게임패스",
+      "Xbox Game Pass",
+      "게임패스"
+    ]
+  },
+  {
+    "domain": "ea.com",
+    "aliases": [
+      "EA Play",
+      "이에이 플레이"
+    ]
+  },
+  {
+    "domain": "steam.com",
+    "aliases": [
+      "스팀",
+      "Steam"
+    ]
+  },
+  {
+    "domain": "naverplus.com",
+    "aliases": [
+      "네이버플러스 스토어"
+    ]
+  },
+  {
+    "domain": "momstouch.co.kr",
+    "aliases": [
+      "맘스터치",
+      "맘터",
+      "MOM’S TOUCH",
+      "맘스터치 쿠폰",
+      "맘터 쿠폰"
+    ]
+  },
+  {
+    "domain": "daiso.co.kr",
+    "aliases": [
+      "다이소",
+      "아성다이소",
+      "DAISO"
+    ]
+  },
+  {
+    "domain": "kyochon.com",
+    "aliases": [
+      "교촌치킨",
+      "교촌",
+      "Kyochon"
+    ]
+  },
+  {
+    "domain": "goobne.co.kr",
+    "aliases": [
+      "굽네치킨",
+      "굽네",
+      "Goobne"
+    ]
+  },
+  {
+    "domain": "bhc.co.kr",
+    "aliases": [
+      "BHC",
+      "비에이치씨"
+    ]
+  },
+  {
+    "domain": "bbq.co.kr",
+    "aliases": [
+      "BBQ",
+      "비비큐",
+      "제너시스BBQ",
+      "황금올리브치킨",
+      "황올"
+    ]
+  },
+  {
+    "domain": "norangtongdak.co.kr",
+    "aliases": [
+      "노랑통닭",
+      "노랑"
+    ]
+  },
+  {
+    "domain": "dunkindonuts.co.kr",
+    "aliases": [
+      "던킨",
+      "던킨도너츠",
+      "Dunkin"
+    ]
+  },
+  {
+    "domain": "tlj.co.kr",
+    "aliases": [
+      "뚜레쥬르",
+      "뚜레주르",
+      "Tous Les Jours"
+    ]
+  },
+  {
+    "domain": "paris.co.kr",
+    "aliases": [
+      "파리바게뜨",
+      "파리바게트",
+      "파리크라상",
+      "파리크리스마스"
+    ]
+  },
+  {
+    "domain": "kyobobook.co.kr",
+    "aliases": [
+      "교보문고",
+      "교보문고 기프트카드",
+      "교보문고 sam",
+      "교보 sam"
+    ]
+  },
+  {
+    "domain": "yes24.com",
+    "aliases": [
+      "예스24",
+      "YES24",
+      "예스24 북클럽",
+      "YES24 북클럽"
+    ]
+  },
+  {
+    "domain": "lottemart.com",
+    "aliases": [
+      "롯데마트",
+      "롯데마트 금액권"
+    ]
+  },
+  {
+    "domain": "homeplus.co.kr",
+    "aliases": [
+      "홈플러스",
+      "홈플러스 상품권"
+    ]
+  },
+  {
+    "domain": "coffeebean.co.kr",
+    "aliases": [
+      "커피빈",
+      "커피빈코리아",
+      "Coffee Bean"
+    ]
+  },
+  {
+    "domain": "tomntoms.com",
+    "aliases": [
+      "탐앤탐스",
+      "탐탐",
+      "TOM N TOMS"
+    ]
+  },
+  {
+    "domain": "coffeebay.com",
+    "aliases": [
+      "커피베이",
+      "Coffee Bay"
+    ]
+  },
+  {
+    "domain": "artisee.com",
+    "aliases": [
+      "아티제",
+      "artisee"
+    ]
+  },
+  {
+    "domain": "angelinus.com",
+    "aliases": [
+      "엔제리너스",
+      "엔젤리너스",
+      "Angelinus"
+    ]
+  },
+  {
+    "domain": "pascucci.co.kr",
+    "aliases": [
+      "파스쿠찌",
+      "파스쿠치",
+      "Pascucci"
+    ]
+  },
+  {
+    "domain": "jambajuice.co.kr",
+    "aliases": [
+      "잠바주스",
+      "잠바쥬스",
+      "Jamba Juice"
+    ]
+  },
+  {
+    "domain": "mrpizza.co.kr",
+    "aliases": [
+      "미스터피자",
+      "미피",
+      "Mr. Pizza"
+    ]
+  },
+  {
+    "domain": "papajohns.co.kr",
+    "aliases": [
+      "파파존스",
+      "Papa Johns"
+    ]
+  },
+  {
+    "domain": "outback.co.kr",
+    "aliases": [
+      "아웃백",
+      "아웃백스테이크하우스",
+      "Outback"
+    ]
+  },
+  {
+    "domain": "vips.co.kr",
+    "aliases": [
+      "빕스",
+      "VIPS"
+    ]
+  },
+  {
+    "domain": "ashley.co.kr",
+    "aliases": [
+      "애슐리",
+      "애슐리퀸즈",
+      "Ashley"
+    ]
+  },
+  {
+    "domain": "saboten.co.kr",
+    "aliases": [
+      "사보텐",
+      "Saboten"
+    ]
+  },
+  {
+    "domain": "myungranghotdog.com",
+    "aliases": [
+      "명랑핫도그",
+      "명랑시대쌀핫도그"
+    ]
+  },
+  {
+    "domain": "myeongryunjinsa.com",
+    "aliases": [
+      "명륜진사갈비",
+      "명륜진사"
+    ]
+  },
+  {
+    "domain": "isaac-toast.co.kr",
+    "aliases": [
+      "이삭토스트",
+      "이삭"
+    ]
+  },
+  {
+    "domain": "yoajung.co.kr",
+    "aliases": [
+      "요아정",
+      "요거트아이스크림의정석"
+    ]
+  },
+  {
+    "domain": "puradakchicken.com",
+    "aliases": [
+      "푸라닭",
+      "푸라닭치킨",
+      "푸라닭 치킨",
+      "푸라닭쿠폰",
+      "푸라닭 쿠폰"
+    ]
+  },
+  {
+    "domain": "cheogajip.co.kr",
+    "aliases": [
+      "처갓집양념치킨",
+      "처갓집"
+    ]
+  },
+  {
+    "domain": "nenechicken.com",
+    "aliases": [
+      "네네치킨",
+      "네네"
+    ]
+  },
+  {
+    "domain": "kkanbu.co.kr",
+    "aliases": [
+      "깐부치킨",
+      "깐부"
+    ]
+  },
+  {
+    "domain": "krispykreme.co.kr",
+    "aliases": [
+      "크리스피크림도넛",
+      "크리스피크림",
+      "Krispy Kreme"
+    ]
+  },
+  {
+    "domain": "lianhair.com",
+    "aliases": [
+      "리안헤어",
+      "리안"
+    ]
+  },
+  {
+    "domain": "thefaceshop.com",
+    "aliases": [
+      "더페이스샵",
+      "THE FACE SHOP"
+    ]
+  },
+  {
+    "domain": "missha.com",
+    "aliases": [
+      "미샤",
+      "에이블씨엔씨",
+      "MISSHA"
+    ]
+  },
+  {
+    "domain": "innisfree.com",
+    "aliases": [
+      "이니스프리",
+      "innisfree"
+    ]
+  },
+  {
+    "domain": "naturerepublic.com",
+    "aliases": [
+      "네이처리퍼블릭",
+      "네이처 리퍼블릭"
+    ]
+  },
+  {
+    "domain": "uniqlo.com",
+    "aliases": [
+      "유니클로",
+      "UNIQLO"
+    ]
+  },
+  {
+    "domain": "yankeecandle.com",
+    "aliases": [
+      "양키캔들",
+      "Yankee Candle"
+    ]
+  },
+  {
+    "domain": "alphak.co.kr",
+    "aliases": [
+      "알파문구",
+      "알파",
+      "ALPHA"
+    ]
+  },
+  {
+    "domain": "cleantopia.com",
+    "aliases": [
+      "크린토피아",
+      "크린토피아 세탁"
+    ]
+  },
+  {
+    "domain": "wine25plus.com",
+    "aliases": [
+      "와인25플러스",
+      "와인25+"
+    ]
+  },
+  {
+    "domain": "gsretail.com",
+    "aliases": [
+      "GS THE FRESH",
+      "GS더프레시",
+      "GS더프레시 상품권"
+    ]
+  },
+  {
+    "domain": "gscaltex.com",
+    "aliases": [
+      "GS칼텍스",
+      "GS주유권",
+      "Kixx"
+    ]
+  },
+  {
+    "domain": "s-oil.com",
+    "aliases": [
+      "에쓰오일",
+      "S-OIL",
+      "에스오일"
+    ]
+  },
+  {
+    "domain": "oilbank.co.kr",
+    "aliases": [
+      "현대오일뱅크",
+      "HD현대오일뱅크"
+    ]
+  },
+  {
+    "domain": "chaevi.co.kr",
+    "aliases": [
+      "차지비",
+      "CHAEVI",
+      "전기차 충전권"
+    ]
+  },
+  {
+    "domain": "hpoint.h-point.co.kr",
+    "aliases": [
+      "H.Point",
+      "에이치포인트",
+      "현대백화점그룹 포인트"
+    ]
+  },
+  {
+    "domain": "h-point.co.kr",
+    "aliases": [
+      "H.Point",
+      "현대백화점그룹 H.Point"
+    ]
+  },
+  {
+    "domain": "willa.co.kr",
+    "aliases": [
+      "윌라",
+      "윌라 오디오북"
+    ]
+  },
+  {
+    "domain": "gini.co.kr",
+    "aliases": [
+      "지니TV",
+      "지니TV 쿠폰"
+    ]
+  },
+  {
+    "domain": "nhqv.com",
+    "aliases": [
+      "농협 모바일금액권",
+      "농촌사랑상품권",
+      "농협"
+    ]
+  },
+  {
+    "domain": "pillgram.co.kr",
+    "aliases": [
+      "필그램",
+      "Pillgram",
+      "맞춤영양제 필그램"
+    ]
+  },
+  {
+    "domain": "epop.ai",
+    "aliases": [
+      "말해보카",
+      "말해보카 프리미엄",
+      "말해보카 멤버십",
+      "Epop"
+    ]
+  },
+  {
+    "domain": "bluesignum.com",
+    "aliases": [
+      "하루콩",
+      "하루콩 프리미엄",
+      "하루콩 구독",
+      "DailyBean",
+      "블루시그넘",
+      "무디",
+      "Moodee"
+    ]
+  },
+  {
+    "domain": "speak.com",
+    "aliases": [
+      "스픽",
+      "스픽 프리미엄",
+      "Speak Premium",
+      "스픽 영어회화"
+    ]
+  },
+  {
+    "domain": "cakecorp.com",
+    "aliases": [
+      "케이크",
+      "Cake 영어",
+      "케이크 플러스",
+      "Cake Plus"
+    ]
+  },
+  {
+    "domain": "mabopractice.com",
+    "aliases": [
+      "마보",
+      "마보 명상",
+      "마보 프리미엄"
+    ]
+  },
+  {
+    "domain": "mindcafe.co.kr",
+    "aliases": [
+      "마인드카페",
+      "마인드카페 프리미엄"
+    ]
+  },
+  {
+    "domain": "trost.co.kr",
+    "aliases": [
+      "트로스트",
+      "트로스트 프리미엄"
+    ]
+  },
+  {
+    "domain": "calm.com",
+    "aliases": [
+      "캄",
+      "Calm",
+      "Calm Premium"
+    ]
+  },
+  {
+    "domain": "headspace.com",
+    "aliases": [
+      "헤드스페이스",
+      "Headspace"
+    ]
+  },
+  {
+    "domain": "challengers.team",
+    "aliases": [
+      "챌린저스",
+      "챌린저스 앱"
+    ]
+  },
+  {
+    "domain": "myroutine.today",
+    "aliases": [
+      "마이루틴",
+      "MyRoutine",
+      "마이루틴 프리미엄"
+    ]
+  },
+  {
+    "domain": "routinery.app",
+    "aliases": [
+      "루티너리",
+      "Routinery"
+    ]
+  },
+  {
+    "domain": "daylio.net",
+    "aliases": [
+      "데일리오",
+      "Daylio",
+      "Daylio Premium"
+    ]
+  },
+  {
+    "domain": "finchcare.com",
+    "aliases": [
+      "핀치",
+      "Finch",
+      "Finch Plus"
+    ]
+  },
+  {
+    "domain": "planfit.ai",
+    "aliases": [
+      "플랜핏",
+      "플랜핏 프리미엄"
+    ]
+  },
+  {
+    "domain": "noom.com",
+    "aliases": [
+      "눔",
+      "Noom"
+    ]
+  },
+  {
+    "domain": "snow.me",
+    "aliases": [
+      "스노우",
+      "SNOW",
+      "SNOW VIP"
+    ]
+  },
+  {
+    "domain": "epik.com",
+    "aliases": [
+      "에픽",
+      "EPIK",
+      "EPIK Pro"
+    ]
+  },
+  {
+    "domain": "vllo.io",
+    "aliases": [
+      "블로",
+      "VLLO",
+      "VLLO 프리미엄"
+    ]
+  },
+  {
+    "domain": "capcut.com",
+    "aliases": [
+      "캡컷",
+      "CapCut Pro",
+      "캡컷 프로"
+    ]
+  },
+  {
+    "domain": "picsart.com",
+    "aliases": [
+      "픽스아트",
+      "Picsart Gold",
+      "Picsart"
+    ]
+  },
+  {
+    "domain": "foodie.camera",
+    "aliases": [
+      "푸디",
+      "Foodie"
+    ]
+  },
+  {
+    "domain": "podbbang.com",
+    "aliases": [
+      "팟빵",
+      "팟빵 멤버십"
+    ]
+  },
+  {
+    "domain": "audible.com",
+    "aliases": [
+      "오더블",
+      "Audible"
+    ]
+  },
+  {
+    "domain": "spotvnow.com",
+    "aliases": [
+      "스포티비 나우",
+      "SPOTV NOW"
+    ]
+  },
+  {
+    "domain": "fastcampus.co.kr",
+    "aliases": [
+      "패스트캠퍼스",
+      "FastCampus"
+    ]
+  },
+  {
+    "domain": "taling.me",
+    "aliases": [
+      "탈잉",
+      "탈잉 멤버십"
+    ]
+  },
+  {
+    "domain": "elsaspeak.com",
+    "aliases": [
+      "엘사 스픽",
+      "ELSA Speak",
+      "ELSA Premium"
+    ]
+  },
+  {
+    "domain": "riiid.co",
+    "aliases": [
+      "산타",
+      "산타토익",
+      "산타 프리미엄"
+    ]
+  },
+  {
+    "domain": "costco.co.kr",
+    "aliases": [
+      "코스트코",
+      "코스트코 코리아",
+      "Costco",
+      "코스트코 상품권"
+    ]
+  },
+  {
+    "domain": "hp.com",
+    "aliases": [
+      "HP",
+      "에이치피",
+      "휴렛팩커드",
+      "HP 프린터",
+      "HP 노트북"
+    ]
+  },
+  {
+    "domain": "toeic.co.kr",
+    "aliases": [
+      "토익",
+      "TOEIC",
+      "TOEIC 정기시험",
+      "토익 정기시험"
+    ]
+  },
+  {
+    "domain": "ets.org",
+    "aliases": [
+      "토플",
+      "TOEFL",
+      "TOEFL iBT",
+      "ETS"
+    ]
+  },
+  {
+    "domain": "ielts.org",
+    "aliases": [
+      "아이엘츠",
+      "IELTS"
+    ]
+  },
+  {
+    "domain": "opic.or.kr",
+    "aliases": [
+      "오픽",
+      "OPIc",
+      "오픽 시험"
+    ]
+  },
+  {
+    "domain": "teps.or.kr",
+    "aliases": [
+      "텝스",
+      "TEPS"
+    ]
+  },
+  {
+    "domain": "historyexam.go.kr",
+    "aliases": [
+      "한국사능력검정시험",
+      "한능검",
+      "국사편찬위원회"
+    ]
+  },
+  {
+    "domain": "ybm.co.kr",
+    "aliases": [
+      "YBM",
+      "와이비엠",
+      "YBM 어학시험"
+    ]
+  },
+  {
+    "domain": "figma.com",
+    "aliases": [
+      "피그마",
+      "Figma",
+      "Figma AI"
+    ]
+  },
+  {
+    "domain": "midjourney.com",
+    "aliases": [
+      "미드저니",
+      "Midjourney",
+      "Midjourney Basic",
+      "Midjourney Standard"
+    ]
+  },
+  {
+    "domain": "miricanvas.com",
+    "aliases": [
+      "미리캔버스",
+      "미리 캔버스",
+      "MiriCanvas"
+    ]
+  },
+  {
+    "domain": "mangoboard.net",
+    "aliases": [
+      "망고보드",
+      "MangoBoard"
+    ]
+  },
+  {
+    "domain": "inflearn.com",
+    "aliases": [
+      "인프런",
+      "Inflearn",
+      "인프런 구독"
+    ]
+  },
+  {
+    "domain": "gamma.app",
+    "aliases": [
+      "감마",
+      "Gamma",
+      "Gamma AI"
+    ]
+  },
+  {
+    "domain": "gemini.google.com",
+    "aliases": [
+      "제미나이",
+      "구글 제미나이",
+      "Gemini Advanced"
+    ]
+  },
+  {
+    "domain": "copilot.microsoft.com",
+    "aliases": [
+      "마이크로소프트 코파일럿",
+      "MS Copilot",
+      "Copilot Pro"
+    ]
+  },
+  {
+    "domain": "grammarly.com",
+    "aliases": [
+      "그래멀리",
+      "Grammarly",
+      "Grammarly Pro"
+    ]
+  },
+  {
+    "domain": "deepl.com",
+    "aliases": [
+      "딥엘",
+      "DeepL",
+      "DeepL Pro"
+    ]
+  },
+  {
+    "domain": "runwayml.com",
+    "aliases": [
+      "런웨이",
+      "Runway",
+      "RunwayML"
+    ]
+  },
+  {
+    "domain": "elevenlabs.io",
+    "aliases": [
+      "일레븐랩스",
+      "ElevenLabs"
+    ]
+  },
+  {
+    "domain": "suno.com",
+    "aliases": [
+      "수노",
+      "Suno AI",
+      "Suno"
+    ]
+  },
+  {
+    "domain": "udemy.com",
+    "aliases": [
+      "유데미",
+      "Udemy"
+    ]
+  },
+  {
+    "domain": "coursera.org",
+    "aliases": [
+      "코세라",
+      "Coursera"
+    ]
+  },
+  {
+    "domain": "hackers.com",
+    "aliases": [
+      "해커스",
+      "해커스 어학원",
+      "해커스인강"
+    ]
+  },
+  {
+    "domain": "sivillage.com",
+    "aliases": [
+      "시원스쿨",
+      "시원스쿨 구독"
+    ]
+  },
+  {
+    "domain": "megastudy.net",
+    "aliases": [
+      "메가스터디",
+      "메가스터디교육"
+    ]
+  },
+  {
+    "domain": "ebsi.co.kr",
+    "aliases": [
+      "EBSi",
+      "EBS 인터넷강의"
+    ]
+  }
+]
+

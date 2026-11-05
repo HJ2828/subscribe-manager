@@ -44,6 +44,7 @@
 .bubble-force-chart button:focus-visible { z-index: 4; outline: 3px solid rgb(108 92 194 / 32%); outline-offset: 2px; }
 .bubble-force-chart button.selected { z-index: 3; color: #fff; background: #436f77; box-shadow: 0 0 0 4px rgb(67 111 119 / 18%), 0 6px 14px rgb(44 59 69 / 14%); }
 .bubble-force-chart button span { max-width: 100%; overflow: hidden; color: inherit; font-size: clamp(10px, 1.2vw, 14px); font-weight: 800; line-height: 1.15; text-align: center; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.bubble-force-chart .brand-icon { width: 34px; height: 34px; border-radius: 50%; background: rgb(255 255 255 / 82%); color: #393653; font-size: 14px; }
 .bubble-size-note { position: absolute; z-index: 5; right: 10px; bottom: 8px; max-width: calc(100% - 20px); padding: 4px 7px; border-radius: 6px; color: var(--muted); background: rgb(247 246 255 / 88%); font-size: 9px; pointer-events: none; }
 @media (max-width: 760px) { .bubble-force-chart { height: min(440px, calc(280px + var(--bubble-extra-rows) * 40px)); } .bubble-force-chart button span { font-size: 10px; } }
 @media (prefers-reduced-motion: reduce) { .bubble-force-chart button { transition: none; } }

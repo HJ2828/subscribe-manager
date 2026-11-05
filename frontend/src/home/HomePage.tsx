@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getAnnouncements, getCollectionStatus, getRelevantNews, type CollectionStatus, type OperatorAnnouncement, type ServiceNews } from "../lib/api";
 import { syncRecurringItemDates } from "../lib/recurringItems";
 import { displayDate, typeLabel, type ManagedItem } from "../phase3/model";
+import { BrandIcon } from "../brand/brand";
 import { GlassCard, PageHeader } from "../components/ui";
 import galleryIcon from "../assets/figma/gallery.svg";
 import {
@@ -270,7 +271,7 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
                         <button key={event.key} type="button" className="upcoming-row" onClick={() => navigate(`/items/${event.itemId}`)}>
                           <span className="upcoming-date"><b>{event.date.slice(5).replace("-", ".")}</b><small>{event.kind === "payment" ? "결제" : "만료"}</small></span>
                           <span className="upcoming-identity">
-                            <i aria-hidden="true">{event.name.trim().slice(0, 1).toUpperCase() || "?"}</i>
+                            <BrandIcon name={event.name} domain={event.brandDomain} logoUrl={event.brandLogoUrl} />
                             <span className="upcoming-name"><b>{event.name}</b><small>{eventSubtitle(event)}</small></span>
                           </span>
                           <span className={`upcoming-payment${amount === null ? " no-amount" : ""}`}>

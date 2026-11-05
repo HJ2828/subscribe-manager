@@ -15,6 +15,17 @@ export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
   return (await response.json()) as HealthResponse;
 }
 
+export type BrandSearchCandidate = { domain: string; name?: string; logo_url?: string | null };
+
+export async function searchBrands(token: string, query: string, signal?: AbortSignal) {
+  const response = await fetch(`${publicConfig.apiBaseUrl}/api/v1/brands/search?q=${encodeURIComponent(query)}`, {
+    headers: { Authorization: `Bearer ${token}` }, signal,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || "브랜드를 검색하지 못했어요.");
+  return payload as { candidates: BrandSearchCandidate[] };
+}
+
 export async function deleteAccount(accessToken: string): Promise<{ status: "completed" }> {
   const response = await fetch(`${publicConfig.apiBaseUrl}/api/v1/account`, {
     method: "DELETE",

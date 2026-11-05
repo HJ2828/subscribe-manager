@@ -200,6 +200,8 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
       return {
         id: row.item.id,
         name: row.item.service_name,
+        logoUrl: row.item.brand_logo_url,
+        brandDomain: row.item.brand_domain,
         value,
         valueText: metric === "months" ? `${value.toFixed(1)}개월` : money(value, currency),
       };

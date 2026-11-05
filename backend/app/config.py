@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_publishable_key: str | None = None
     supabase_secret_key: str | None = None
+    brandfetch_api_key: str | None = None
+    brandfetch_client_id: str | None = None
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_daily_analysis_limit: int = 10

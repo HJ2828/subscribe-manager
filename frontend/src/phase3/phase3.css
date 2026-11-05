@@ -170,6 +170,18 @@
 
 .form-card-heading h2 { margin: 0; }
 .form-card-description { margin: -8px 0 0; color: var(--muted); font-size: 13px; }
+.brand-picker { display: grid; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.brand-picker-heading, .brand-picker-row, .brand-picker-meta { display: flex; align-items: center; gap: 10px; }
+.brand-picker-heading { justify-content: space-between; }
+.brand-picker-heading small, .brand-picker-meta { color: var(--muted); font-size: 12px; }
+.brand-picker-row input { flex: 1; min-width: 0; }
+.brand-picker-meta button { border: 0; color: var(--primary); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
+.brand-candidates { display: grid; gap: 6px; }
+.brand-candidates button { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: #fff; text-align: left; cursor: pointer; }
+.brand-candidates button > span:last-child { display: grid; gap: 2px; }
+.brand-candidates small { color: var(--muted); }
+.brand-icon { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; overflow: hidden; border-radius: 10px; color: #393653; background: #f0f1f5; font-style: normal; font-weight: 800; }
+.brand-icon img { width: 100%; height: 100%; object-fit: contain; }
 .form-grid .field-wide { grid-column: 1 / -1; }
 .subscription-mode-picker {
   display: grid;

@@ -1,6 +1,8 @@
 from typing import Annotated, Literal
 from uuid import UUID
+from urllib.parse import quote, urlparse
 
+import httpx
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -31,6 +33,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
         return {"status": "ok", "environment": active_settings.app_environment}
+
+    @app.get("/api/v1/brands/search", tags=["brands"])
+    async def search_brands(
+        q: str,
+        _: Annotated[CurrentUser, Depends(require_current_user)],
+    ) -> dict[str, list[dict[str, str | None]]]:
+        query = q.strip()
+        if not query or len(query) > 120 or not active_settings.brandfetch_client_id:
+            return {"candidates": []}
+        params = {"c": active_settings.brandfetch_client_id}
+        headers = {"Accept": "application/json"}
+        if active_settings.brandfetch_api_key:
+            headers["Authorization"] = f"Bearer {active_settings.brandfetch_api_key}"
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                response = await client.get(
+                    f"https://api.brandfetch.io/v2/search/{quote(query, safe='')}",
+                    params=params,
+                    headers=headers,
+                )
+        except httpx.HTTPError:
+            return {"candidates": []}
+        if response.status_code >= 400:
+            return {"candidates": []}
+        body = response.json()
+        rows = body if isinstance(body, list) else body.get("results", []) if isinstance(body, dict) else []
+        candidates: list[dict[str, str | None]] = []
+        seen: set[str] = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            domain = str(row.get("domain") or "").strip().lower()
+            if not domain:
+                url = str(row.get("url") or "").strip()
+                domain = urlparse(url if "://" in url else f"https://{url}").hostname or ""
+            domain = domain.removeprefix("www.")
+            if not domain or domain in seen:
+                continue
+            seen.add(domain)
+            logo = f"https://cdn.brandfetch.io/domain/{domain}"
+            if active_settings.brandfetch_client_id:
+                logo = f"{logo}?c={quote(active_settings.brandfetch_client_id, safe='')}"
+            candidates.append({"domain": domain, "name": str(row.get("name") or domain), "logo_url": logo})
+        return {"candidates": candidates[:5]}
 
     @app.get("/api/v1/me", tags=["account"])
     async def me(user: Annotated[CurrentUser, Depends(require_current_user)]) -> dict[str, str]:

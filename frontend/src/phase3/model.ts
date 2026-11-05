@@ -24,6 +24,9 @@ export type ManagedItem = {
   user_id: string;
   management_type: ManagementType;
   service_name: string;
+  brand_name: string | null;
+  brand_domain: string | null;
+  brand_logo_url: string | null;
   plan_name: string | null;
   provider_name: string | null;
   amount: number | null;
@@ -136,6 +139,9 @@ export function createEmptyDraft(
   return {
     management_type: type,
     service_name: "",
+    brand_name: null,
+    brand_domain: null,
+    brand_logo_url: null,
     plan_name: "",
     provider_name: "",
     amount: null,
@@ -414,6 +420,9 @@ export function buildManagedItemPayload(
     service_name: draft.service_name.trim(),
     plan_name: draft.plan_name?.trim() || null,
     provider_name: draft.provider_name?.trim() || null,
+    brand_name: draft.brand_name?.trim() || null,
+    brand_domain: draft.brand_domain?.trim() || null,
+    brand_logo_url: draft.brand_logo_url?.trim() || null,
     currency: draft.amount === null ? null : draft.currency,
     unit_name: draft.unit_name?.trim() || null,
     conditions: draft.conditions?.trim() || null,

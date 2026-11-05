@@ -7,6 +7,8 @@ import {
 } from "react";
 
 import { useAuth } from "../auth/AuthContext";
+import { searchBrands } from "../lib/api";
+import { BrandIcon, matchLocalBrands, type BrandCandidate } from "../brand/brand";
 import {
   analyzeImage,
   changeImageLifecycle,
@@ -507,7 +509,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
                 >
                   <span className="item-row-dday-cell"><ItemDdayBadge item={item} /></span>
                   <span className="item-row-name">
-                    <i className="item-row-icon" aria-hidden="true">{item.service_name.trim().slice(0, 1).toUpperCase() || "?"}</i>
+                    <BrandIcon name={item.service_name} domain={item.brand_domain} logoUrl={item.brand_logo_url} className="item-row-icon" />
                     <span className="item-row-copy">
                       <span className="item-row-title"><strong>{item.service_name || "이름 확인 필요"}</strong>{imageItemIds.has(item.id) ? <i className="item-image-dot" aria-label="이미지 저장됨" /> : null}</span>
                       <small>{typeLabel(item.management_type, true)} · {item.category || "카테고리 미정"}</small>
@@ -1040,6 +1042,7 @@ export function ManagedItemFormFields({
   update,
   changeType,
   errors,
+  accessToken,
   typeDisabled = false,
   typeHelp,
   imageFilledFields = new Set<keyof ManagedItemDraft>(),
@@ -1053,12 +1056,16 @@ export function ManagedItemFormFields({
   ) => void;
   changeType: (type: ManagementType) => void | Promise<void>;
   errors: Record<string, string>;
+  accessToken?: string;
   typeDisabled?: boolean;
   typeHelp?: ReactNode;
   imageFilledFields?: ReadonlySet<keyof ManagedItemDraft>;
   amountHistoryControl?: ReactNode;
   actions: ReactNode;
 }) {
+  const [brandCandidates, setBrandCandidates] = useState<BrandCandidate[]>([]);
+  const [brandQuery, setBrandQuery] = useState(draft.brand_name || draft.service_name);
+  const [brandBusy, setBrandBusy] = useState(false);
   const imageFilled = (key: keyof ManagedItemDraft) =>
     imageFilledFields.has(key);
   const [subscriptionMode, setSubscriptionMode] = useState<SubscriptionMode>(
@@ -1089,6 +1096,59 @@ export function ManagedItemFormFields({
   function chooseBenefitMode(mode: BenefitMode) {
     setBenefitMode(mode);
     void changeType(mode === "discount" ? "coupon" : mode === "value" ? "voucher" : "gifticon");
+  }
+  useEffect(() => {
+    setBrandQuery(draft.brand_name || draft.service_name);
+  }, [draft.brand_name, draft.service_name]);
+  useEffect(() => {
+    const values = [draft.service_name, draft.provider_name, draft.plan_name, draft.conditions];
+    const timer = window.setTimeout(async () => {
+      const local = matchLocalBrands(values);
+      if (local.length === 1) {
+        const match = local[0];
+        update("brand_name", match.name || match.domain);
+        update("brand_domain", match.domain);
+        update("brand_logo_url", match.logo_url || null);
+        setBrandCandidates([]);
+        return;
+      }
+      if (local.length > 1) {
+        setBrandCandidates(local);
+        return;
+      }
+      if (!accessToken || !draft.service_name.trim()) return;
+      setBrandBusy(true);
+      try {
+        const result = await searchBrands(accessToken, draft.service_name.trim());
+        setBrandCandidates(result.candidates);
+        if (result.candidates.length === 1) {
+          const match = result.candidates[0];
+          update("brand_name", match.name || match.domain);
+          update("brand_domain", match.domain);
+          update("brand_logo_url", match.logo_url || null);
+        }
+      } finally {
+        setBrandBusy(false);
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [draft.service_name, draft.provider_name, draft.plan_name, draft.conditions, accessToken]);
+  async function searchManualBrand() {
+    if (!accessToken || !brandQuery.trim()) return;
+    setBrandBusy(true);
+    try {
+      const result = await searchBrands(accessToken, brandQuery.trim());
+      setBrandCandidates(result.candidates);
+    } finally {
+      setBrandBusy(false);
+    }
+  }
+  function chooseBrand(candidate: BrandCandidate) {
+    update("brand_name", candidate.name || candidate.domain);
+    update("brand_domain", candidate.domain);
+    update("brand_logo_url", candidate.logo_url || null);
+    setBrandQuery(candidate.name || candidate.domain);
+    setBrandCandidates([]);
   }
   return (
     <>
@@ -1201,6 +1261,16 @@ export function ManagedItemFormFields({
           subscriptionMode={subscriptionMode}
           benefitMode={benefitMode}
         />
+        <div className="brand-picker">
+          <div className="brand-picker-heading"><strong>브랜드 아이콘</strong><small>입력값과 별칭을 기준으로 자동 연결돼요. 원래 이름은 그대로 저장됩니다.</small></div>
+          <div className="brand-picker-row">
+            <BrandIcon name={draft.service_name} domain={draft.brand_domain} logoUrl={draft.brand_logo_url} />
+            <input aria-label="브랜드 검색" value={brandQuery} onChange={(event) => setBrandQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchManualBrand(); } }} placeholder="브랜드명 또는 도메인" />
+            <button type="button" className="button secondary" onClick={() => void searchManualBrand()} disabled={brandBusy}>{brandBusy ? "검색 중" : "검색"}</button>
+          </div>
+          {draft.brand_domain ? <small className="brand-picker-meta">연결됨 · {draft.brand_name || draft.brand_domain} · {draft.brand_domain} <button type="button" onClick={() => { update("brand_name", null); update("brand_domain", null); update("brand_logo_url", null); setBrandCandidates([]); }}>기본 아이콘 사용</button></small> : <small className="brand-picker-meta">매칭되지 않아도 첫 글자 기본 아이콘으로 저장할 수 있어요.</small>}
+          {brandCandidates.length ? <div className="brand-candidates" role="listbox" aria-label="브랜드 후보">{brandCandidates.map((candidate) => <button type="button" key={candidate.domain} onClick={() => chooseBrand(candidate)}><BrandIcon name={candidate.name || candidate.domain} domain={candidate.domain} logoUrl={candidate.logo_url} /><span><b>{candidate.name || candidate.domain}</b><small>{candidate.domain}</small></span></button>)}</div> : null}
+        </div>
       </div>
       <div className="form-card">
         <h2>분류와 메모</h2>
@@ -1640,6 +1710,7 @@ export function Phase3FormPage({
               update={update}
               changeType={changeType}
               errors={errors}
+              accessToken={session?.access_token}
               typeDisabled={editing}
               typeHelp={
                 editing

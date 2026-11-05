@@ -8,6 +8,9 @@ export type HomeScheduleEvent = {
   kind: HomeEventKind;
   date: string;
   name: string;
+  brandName?: string | null;
+  brandDomain?: string | null;
+  brandLogoUrl?: string | null;
   managementType: ManagementType;
   providerName: string | null;
   planName: string | null;
@@ -104,6 +107,9 @@ export function buildHomeSchedule(
           kind: "payment",
           date,
           name: item.service_name,
+          brandName: item.brand_name,
+          brandDomain: item.brand_domain,
+          brandLogoUrl: item.brand_logo_url,
           managementType: item.management_type,
           providerName: item.provider_name,
           planName: item.plan_name,
@@ -128,6 +134,9 @@ export function buildHomeSchedule(
         kind: "benefit",
         date: item.target_date_value,
         name: item.service_name,
+        brandName: item.brand_name,
+        brandDomain: item.brand_domain,
+        brandLogoUrl: item.brand_logo_url,
         managementType: item.management_type,
         providerName: item.provider_name,
         planName: item.plan_name,

@@ -8,12 +8,15 @@ import {
   type Simulation,
   type SimulationNodeDatum,
 } from "d3-force";
+import { BrandIcon } from "../brand/brand";
 
 export interface BubbleChartItem {
   id: string;
   name: string;
   value: number;
   valueText: string;
+  logoUrl?: string | null;
+  brandDomain?: string | null;
 }
 
 interface BubbleNode extends SimulationNodeDatum, BubbleChartItem {
@@ -264,7 +267,8 @@ export function BubbleForceChart({
             onPointerCancel={(event) => finishDrag(event, true)}
             onClick={(event) => { if (event.detail === 0) onSelect(item.id); }}
           >
-            <span aria-hidden="true">{shortName}</span>
+            <BrandIcon name={item.name} domain={item.brandDomain} logoUrl={item.logoUrl} />
+            <span aria-hidden="true" className="bubble-short-name">{shortName}</span>
           </button>
         );
       })}
