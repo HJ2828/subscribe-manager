@@ -10,7 +10,9 @@ import navHomeIcon from "./assets/figma/nav-home.svg";
 import navListIcon from "./assets/figma/nav-list.svg";
 import navReportIcon from "./assets/figma/nav-report.svg";
 import navSettingsIcon from "./assets/figma/nav-settings.svg";
+import aiNewsIcon from "./assets/figma/ai-news.svg";
 import notificationIcon from "./assets/figma/notification.svg";
+import sidebarIcon from "./assets/figma/sidebar.svg";
 import statusAlertIcon from "./assets/figma/status-alert.svg";
 import warningIcon from "./assets/figma/warning.svg";
 import { useAuth } from "./auth/AuthContext";
@@ -103,7 +105,7 @@ const DEFAULT_PROFILE: Profile = {
   country_code: "KR",
   default_currency: "KRW",
   timezone: "Asia/Seoul",
-  notification_days_before: [3, 0],
+  notification_days_before: [7, 3, 1, 0],
   notification_time: "09:00",
   in_app_notifications_enabled: true,
 };
@@ -393,7 +395,7 @@ function LoginPage() {
       </form>
       <div className="account-help">
         <AppLink to="/signup">회원가입</AppLink>
-        <AppLink to="/forgot-password">비밀번호 재설정</AppLink>
+        <AppLink to="/forgot-password">비밀번호 찾기</AppLink>
       </div>
       <div className="divider" />
       <p className="card-footnote">
@@ -800,18 +802,26 @@ const navItems = [
   ["전체 목록", navListIcon, "/items"],
   ["캘린더", navCalendarIcon, "/calendar"],
   ["리포트", navReportIcon, "/reports"],
-  ["소식", navListIcon, "/news"],
+  ["소식", aiNewsIcon, "/news"],
   ["설정", navSettingsIcon, "/settings"],
 ] as const;
 
 function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "reports" | "settings" | "notifications" | "news" | "scraps" | "operations" }) {
   const { client, session } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => window.localStorage.getItem("dalli-sidebar") !== "closed",
+  );
   useEffect(() => {
     if (!client || !session || typeof client.from !== "function") return;
     client.from("in_app_notifications").select("id", { count: "exact", head: true }).eq("user_id", session.user.id).is("read_at", null)
       .then(({ count }) => setUnreadCount(count || 0));
   }, [client, session]);
+  useEffect(() => {
+    document.body.classList.toggle("sidebar-collapsed", !sidebarOpen);
+    window.localStorage.setItem("dalli-sidebar", sidebarOpen ? "open" : "closed");
+    return () => document.body.classList.remove("sidebar-collapsed");
+  }, [sidebarOpen]);
 
   const activeForLabel = (label: string) =>
     label === "홈" ? "home" : label === "전체 목록" ? "items" : label === "캘린더" ? "calendar" : label === "리포트" ? "reports" : label === "소식" ? "news" : "settings";
@@ -831,7 +841,15 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
   );
   return (
     <>
-      <aside className="app-sidebar">
+      <aside className="app-sidebar" aria-hidden={!sidebarOpen} inert={!sidebarOpen}>
+        <button
+          type="button"
+          className="sidebar-close-button"
+          aria-label="사이드바 닫기"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <img src={sidebarIcon} alt="" aria-hidden="true" />
+        </button>
         <div className="sidebar-brand"><Logo /><small>달마다 돌아오는 구독 · 기한 관리</small></div>
         {navigationLinks("sidebar-nav")}
         <div className="sidebar-footer">
@@ -850,6 +868,15 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
           </div>
         </div>
       </aside>
+      <button
+        type="button"
+        className="sidebar-open-button"
+        aria-label="사이드바 열기"
+        aria-expanded={sidebarOpen}
+        onClick={() => setSidebarOpen(true)}
+      >
+        ☰
+      </button>
       <header className="app-header mobile-app-header">
         <Logo />
         <AppLink
@@ -2039,10 +2066,26 @@ function SettingsPage() {
                 <button
                   type="button"
                   className="choice-chip"
+                  aria-pressed={profile.notification_days_before.includes(7)}
+                  onClick={() => toggleDay(7)}
+                >
+                  7일 전
+                </button>
+                <button
+                  type="button"
+                  className="choice-chip"
                   aria-pressed={profile.notification_days_before.includes(3)}
                   onClick={() => toggleDay(3)}
                 >
                   3일 전
+                </button>
+                <button
+                  type="button"
+                  className="choice-chip"
+                  aria-pressed={profile.notification_days_before.includes(1)}
+                  onClick={() => toggleDay(1)}
+                >
+                  1일 전
                 </button>
                 <button
                   type="button"
@@ -2105,7 +2148,6 @@ function SettingsPage() {
             </button>
           </section>
           <aside className="account-column">
-            {session?.access_token ? <GoogleCalendarSettings accessToken={session.access_token} /> : null}
             {isOperator ? (
               <section className="settings-card">
                 <h2>운영자 도구</h2>
@@ -2128,6 +2170,9 @@ function SettingsPage() {
                   {storageMb.toFixed(storageMb > 0 ? 1 : 0)}MB / 100MB
                 </strong>
               </div>
+              <AppLink to="/forgot-password" className="button secondary full">
+                비밀번호 변경
+              </AppLink>
               <button
                 className="button secondary full"
                 type="button"
@@ -2137,6 +2182,7 @@ function SettingsPage() {
                 {logoutBusy ? "로그아웃 중" : "로그아웃"}
               </button>
             </section>
+            {session?.access_token ? <GoogleCalendarSettings accessToken={session.access_token} /> : null}
             <section className="settings-card deletion-card">
               <h2>회원 탈퇴</h2>
               <p>

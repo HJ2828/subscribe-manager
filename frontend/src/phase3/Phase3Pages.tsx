@@ -22,7 +22,17 @@ import {
 } from "../phase4/imageDraft";
 import { ItemSupportContent } from "../phase8/Phase8Pages";
 import { PageHeader } from "../components/ui";
+import { syncRecurringItemDates } from "../lib/recurringItems";
+import { todayInTimeZone } from "../home/homeModel";
+import {
+  buildPaymentReceipts,
+  monthsBetween,
+  type PaymentReceipt,
+  type PaymentRecordOverride,
+  type PricePeriod,
+} from "../phase6/reportModel";
 import galleryIcon from "../assets/figma/gallery.svg";
+import historyQueryIcon from "../assets/figma/history-query.svg";
 import {
   CATEGORY_OPTIONS,
   TYPE_OPTIONS,
@@ -50,6 +60,8 @@ import {
 import "./phase3.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
+type SubscriptionMode = "recurring" | "term" | "trial";
+type BenefitMode = "exchange" | "value" | "discount" | "other";
 type PageProps = { navigation: ReactNode };
 type ItemImage = {
   id: string;
@@ -97,6 +109,7 @@ function Field({
   hint,
   imageFilled = false,
   required = false,
+  className,
   children,
 }: {
   id: string;
@@ -105,11 +118,12 @@ function Field({
   hint?: string;
   imageFilled?: boolean;
   required?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
     <div
-      className="field"
+      className={`field${className ? ` ${className}` : ""}`}
       data-invalid={error ? "true" : undefined}
       data-image-filled={imageFilled ? "true" : undefined}
     >
@@ -154,6 +168,15 @@ function Info({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function HelpPopover({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <details className="help-popover">
+      <summary aria-label={label}>?</summary>
+      <div role="tooltip">{children}</div>
+    </details>
+  );
+}
+
 function PageLoading({ label }: { label: string }) {
   return (
     <main className="loading-screen">
@@ -170,6 +193,10 @@ function formatAmount(item: ManagedItem) {
   if (!item.currency)
     return `${new Intl.NumberFormat("ko-KR").format(item.amount)} · 통화 확인 필요`;
   return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(item.amount)} ${item.currency}`;
+}
+
+function formatMoneyValue(value: number, currency: string) {
+  return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(value)} ${currency}`;
 }
 
 function statusLabel(item: ManagedItem) {
@@ -273,14 +300,17 @@ export function Phase3ListPage({ navigation }: PageProps) {
     Promise.all([
       client.from("items").select("*").eq("user_id", session.user.id).order("created_at", { ascending: false }),
       client.from("image_assets").select("item_id,lifecycle_status").eq("user_id", session.user.id).eq("lifecycle_status", "active").not("item_id", "is", null),
-    ]).then(([itemsResult, imagesResult]) => {
+    ]).then(async ([itemsResult, imagesResult]) => {
         if (!active) return;
         if (itemsResult.error)
           setNotice({
             tone: "error",
             text: "관리 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           });
-        const loaded = (itemsResult.data || []) as ManagedItem[];
+        const synced = await syncRecurringItemDates(client, session.user.id, (itemsResult.data || []) as ManagedItem[]);
+        if (!active) return;
+        const loaded = synced.items;
+        if (synced.failedCount) setNotice({ tone: "info", text: "일부 반복 결제의 다음 결제일을 갱신하지 못했어요. 다시 불러와 주세요." });
         setImageItemIds(new Set((imagesResult.data || []).map((image) => image.item_id).filter(Boolean) as string[]));
         const expiredIds = loaded
           .filter(
@@ -344,7 +374,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
     <div className="app-shell items-shell">
       {navigation}
       <main className="items-page phase3-page">
-        <PageHeader eyebrow="내 관리 항목" title="구독과 생활 기한" description="구독과 생활 기한을 한곳에서 관리하세요." actions={<div className="items-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
+        <PageHeader eyebrow="전체 목록" title="구독과 생활 기한" description="구독과 생활 기한을 한곳에서 관리하세요." actions={<div className="home-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
         <NoticeBox notice={notice} />
         <section className="filter-card phase3-filter">
           <div className="filter-card-header">
@@ -477,17 +507,20 @@ export function Phase3ListPage({ navigation }: PageProps) {
                 >
                   <span className="item-row-dday-cell"><ItemDdayBadge item={item} /></span>
                   <span className="item-row-name">
+                    <i className="item-row-icon" aria-hidden="true">{item.service_name.trim().slice(0, 1).toUpperCase() || "?"}</i>
                     <span className="item-row-copy">
-                      <span className="item-row-title"><i className="item-row-icon" aria-hidden="true">{item.service_name.trim().slice(0, 1).toUpperCase() || "?"}</i><strong>{item.service_name || "이름 확인 필요"}</strong>{imageItemIds.has(item.id) ? <i className="item-image-dot" aria-label="이미지 저장됨" /> : null}</span>
+                      <span className="item-row-title"><strong>{item.service_name || "이름 확인 필요"}</strong>{imageItemIds.has(item.id) ? <i className="item-image-dot" aria-label="이미지 저장됨" /> : null}</span>
                       <small>{typeLabel(item.management_type, true)} · {item.category || "카테고리 미정"}</small>
                     </span>
                   </span>
-                  <strong>{formatAmount(item)}</strong>
-                  <span>{itemDate(item)}</span>
+                  <span className="item-row-end">
+                    <strong>{formatAmount(item)}</strong>
+                    <span className="item-row-arrow" aria-hidden="true">›</span>
+                  </span>
+                  <span className="item-row-date">{itemDate(item)}</span>
                   <em data-status={itemStatusValue(item)}>
                     {statusLabel(item)}
                   </em>
-                  <span className="item-row-arrow" aria-hidden="true">›</span>
                 </button>
               ))}
             </div>
@@ -511,10 +544,6 @@ export function Phase3ListPage({ navigation }: PageProps) {
             </div>
           )}
         </section>
-        <Info title="모르는 정보는 그대로 남겨요">
-          0원과 금액 미확인을 구분하고, 연·월만 확인된 날짜에 임의의 일자를
-          만들지 않아요.
-        </Info>
       </main>
     </div>
   );
@@ -529,6 +558,7 @@ function DateField({
   onPrecision,
   error,
   hint,
+  suggestion,
   imageFilled = false,
 }: {
   prefix: string;
@@ -538,7 +568,8 @@ function DateField({
   onValue: (value: string | null) => void;
   onPrecision: (value: DatePrecision) => void;
   error?: string;
-  hint: string;
+  hint?: ReactNode;
+  suggestion?: ReactNode;
   imageFilled?: boolean;
 }) {
   const currentPrecision = precision || "day";
@@ -549,17 +580,22 @@ function DateField({
           <span>{label}</span>
           {imageFilled ? <small className="image-filled-badge">이미지에서 입력됨</small> : null}
         </label>
-        <select
-          aria-label={`${label} 정밀도`}
-          value={currentPrecision}
-          onChange={(event) => {
-            onPrecision(event.target.value as DatePrecision);
-            onValue(null);
-          }}
-        >
-          <option value="day">일자</option>
-          <option value="month">연·월</option>
-        </select>
+        <div className="date-field-tools">
+          <HelpPopover label="날짜 정밀도 안내">
+            연·월만 확인된 날짜는 그대로 저장하고 캘린더에 임의의 일자를 만들지 않아요.
+          </HelpPopover>
+          <select
+            aria-label={`${label} 정밀도`}
+            value={currentPrecision}
+            onChange={(event) => {
+              onPrecision(event.target.value as DatePrecision);
+              onValue(null);
+            }}
+          >
+            <option value="day">일자</option>
+            <option value="month">연·월</option>
+          </select>
+        </div>
       </div>
       <input
         id={`${prefix}-value`}
@@ -571,9 +607,11 @@ function DateField({
         <small className="field-error" role="alert">
           {error}
         </small>
-      ) : (
+      ) : suggestion !== undefined ? (
+        suggestion ? <small>{suggestion}</small> : null
+      ) : hint ? (
         <small>{hint}</small>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -583,6 +621,9 @@ function TypeSpecificFields({
   update,
   errors,
   imageFilledFields = new Set<keyof ManagedItemDraft>(),
+  amountHistoryControl,
+  subscriptionMode,
+  benefitMode,
 }: {
   draft: ManagedItemDraft;
   update: <K extends keyof ManagedItemDraft>(
@@ -591,18 +632,32 @@ function TypeSpecificFields({
   ) => void;
   errors: Record<string, string>;
   imageFilledFields?: ReadonlySet<keyof ManagedItemDraft>;
+  amountHistoryControl?: ReactNode;
+  subscriptionMode?: SubscriptionMode;
+  benefitMode?: BenefitMode;
 }) {
-  const recurring = draft.management_type === "recurring_subscription";
-  const paymentSchedule = isPaymentScheduleType(draft.management_type);
-  const fixed = draft.management_type === "fixed_term_membership";
+  const subscription = draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership";
+  const mode = subscriptionMode || (draft.management_type === "fixed_term_membership" ? "term" : "recurring");
+  const recurring = subscription && mode === "recurring";
+  const paymentSchedule = subscription && mode === "recurring";
+  const fixed = subscription && mode === "term";
+  const trial = subscription && mode === "trial";
   const consumable = canMarkUsed(draft.management_type);
   const points = draft.management_type === "points";
   const warranty = draft.management_type === "warranty";
+  const benefit = draft.management_type === "gifticon" || draft.management_type === "coupon" || draft.management_type === "voucher";
+  const activeBenefitMode = benefitMode || (draft.management_type === "coupon" ? "discount" : draft.management_type === "voucher" ? "value" : "exchange");
+  const proposalStartValue = draft.start_date_precision === "month" && draft.start_date_value
+    ? `${draft.start_date_value}-01`
+    : draft.start_date_value;
+  const proposalStartPrecision = draft.start_date_precision === "month" ? "day" : draft.start_date_precision;
+  const proposalToday = todayInTimeZone("Asia/Seoul");
   const proposed = paymentSchedule
     ? proposeNextRecurringDate(
-        draft.start_date_value,
-        draft.start_date_precision,
+        proposalStartValue,
+        proposalStartPrecision,
         draft.billing_cycle,
+        new Date(`${proposalToday}T12:00:00`),
       )
     : null;
   const imageFilled = (...keys: Array<keyof ManagedItemDraft>) =>
@@ -610,11 +665,13 @@ function TypeSpecificFields({
   return (
     <>
       <div className="form-grid">
-        {recurring || fixed ? (
+        {subscription ? (
           <Field id="item-plan" label="요금제" imageFilled={imageFilled("plan_name")}>
             <input
               id="item-plan"
               value={draft.plan_name || ""}
+              placeholder={trial ? "무료 체험" : recurring ? "예: 프리미엄, Plus" : "예: 3개월 이용권, 연간 회원권"}
+              readOnly={trial}
               onChange={(event) => update("plan_name", event.target.value)}
             />
           </Field>
@@ -622,6 +679,7 @@ function TypeSpecificFields({
         {consumable || points || warranty ? (
           <Field
             id="item-provider"
+            className={warranty ? "field-wide" : undefined}
             imageFilled={imageFilled("provider_name")}
             label={
               warranty
@@ -634,6 +692,21 @@ function TypeSpecificFields({
             <input
               id="item-provider"
               value={draft.provider_name || ""}
+              placeholder={
+                warranty
+                  ? "예: AppleCare+, 제조사 기본 보증"
+                  : points
+                  ? "예: 네이버페이 결제 가능 매장, CJ 계열사"
+                  : benefit
+                  ? activeBenefitMode === "exchange"
+                    ? "예: 스타벅스"
+                    : activeBenefitMode === "value"
+                      ? "예: 이마트"
+                      : activeBenefitMode === "discount"
+                        ? "예: 올리브영"
+                        : undefined
+                  : undefined
+              }
               onChange={(event) => update("provider_name", event.target.value)}
             />
           </Field>
@@ -647,7 +720,6 @@ function TypeSpecificFields({
               }
               error={errors.amount}
               imageFilled={imageFilled("amount")}
-              hint="확인한 0원과 금액 미확인을 구분해요."
             >
               <input
                 id="item-amount"
@@ -665,6 +737,7 @@ function TypeSpecificFields({
                 }
                 placeholder="금액 확인 필요"
               />
+              {amountHistoryControl}
             </Field>
             <Field
               id="item-currency"
@@ -676,15 +749,14 @@ function TypeSpecificFields({
               <select
                 id="item-currency"
                 value={draft.currency || ""}
-                onChange={(event) =>
-                  update("currency", event.target.value || null)
-                }
+                onChange={(event) => update("currency", event.target.value || null)}
               >
                 <option value="">통화 확인 필요</option>
                 <option value="KRW">KRW · 원화</option>
                 <option value="USD">USD · 달러</option>
                 <option value="JPY">JPY · 엔화</option>
                 <option value="EUR">EUR · 유로</option>
+                <option value="GBP">GBP · 파운드</option>
               </select>
             </Field>
           </>
@@ -767,7 +839,7 @@ function TypeSpecificFields({
           </Field>
         ) : null}
       </div>
-      {paymentSchedule || fixed || warranty ? (
+      {subscription || warranty ? (
         <DateField
           prefix="item-start"
           label={
@@ -783,7 +855,7 @@ function TypeSpecificFields({
           onPrecision={(value) => update("start_date_precision", value)}
           error={errors.start_date}
           imageFilled={imageFilled("start_date_value", "start_date_precision")}
-          hint="확인된 일자 또는 연·월을 그대로 저장해요."
+          hint={undefined}
         />
       ) : null}
       <DateField
@@ -791,7 +863,9 @@ function TypeSpecificFields({
         label={
           paymentSchedule
             ? "확인한 다음 결제일"
-            : fixed
+            : trial
+              ? "체험 종료일"
+              : fixed
               ? "갱신일·종료일"
               : warranty
                 ? "종료일"
@@ -807,6 +881,22 @@ function TypeSpecificFields({
         onPrecision={(value) => update("target_date_precision", value)}
         error={errors.target_date}
         imageFilled={imageFilled("target_date_value", "target_date_precision")}
+        suggestion={
+          paymentSchedule ? (
+            <button
+              type="button"
+              className="date-suggestion-button"
+              disabled={!proposed}
+              onClick={() => {
+                if (!proposed) return;
+                update("target_date_precision", "day");
+                update("target_date_value", proposed);
+              }}
+            >
+              예상 날짜 적용하기
+            </button>
+          ) : null
+        }
         hint="날짜가 없어도 저장할 수 있고, 연·월에는 D-day를 만들지 않아요."
       />
       {paymentSchedule ? (
@@ -842,6 +932,15 @@ function TypeSpecificFields({
           <textarea
             id="item-conditions"
             rows={3}
+            placeholder={
+              warranty
+                ? "예: 보장 범위, 자기부담금, 수리 접수 방법"
+                : points
+                ? "예: 일부 적립분은 사용처 제한"
+                : benefit
+                  ? "예: 일부 매장 제외, 최소 구매 금액, 온라인 사용 조건"
+                  : undefined
+            }
             value={draft.conditions || ""}
             onChange={(event) => update("conditions", event.target.value)}
           />
@@ -944,6 +1043,7 @@ export function ManagedItemFormFields({
   typeDisabled = false,
   typeHelp,
   imageFilledFields = new Set<keyof ManagedItemDraft>(),
+  amountHistoryControl,
   actions,
 }: {
   draft: ManagedItemDraft;
@@ -956,10 +1056,40 @@ export function ManagedItemFormFields({
   typeDisabled?: boolean;
   typeHelp?: ReactNode;
   imageFilledFields?: ReadonlySet<keyof ManagedItemDraft>;
+  amountHistoryControl?: ReactNode;
   actions: ReactNode;
 }) {
   const imageFilled = (key: keyof ManagedItemDraft) =>
     imageFilledFields.has(key);
+  const [subscriptionMode, setSubscriptionMode] = useState<SubscriptionMode>(
+    draft.management_type === "fixed_term_membership"
+      ? "term"
+      : draft.plan_name === "무료 체험"
+        ? "trial"
+        : "recurring",
+  );
+  const subscriptionType = draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership";
+  const benefitType = ["gifticon", "coupon", "voucher"].includes(draft.management_type);
+  const points = draft.management_type === "points";
+  const [benefitMode, setBenefitMode] = useState<BenefitMode>(
+    draft.management_type === "coupon" ? "discount" : draft.management_type === "voucher" ? "value" : "exchange",
+  );
+  function chooseSubscriptionMode(mode: SubscriptionMode) {
+    setSubscriptionMode(mode);
+    if (mode === "term") {
+      void changeType("fixed_term_membership");
+      return;
+    }
+    void changeType("recurring_subscription");
+    if (mode === "trial") {
+      update("plan_name", "무료 체험");
+      update("amount", 0);
+    }
+  }
+  function chooseBenefitMode(mode: BenefitMode) {
+    setBenefitMode(mode);
+    void changeType(mode === "discount" ? "coupon" : mode === "value" ? "voucher" : "gifticon");
+  }
   return (
     <>
       <div className="form-card">
@@ -974,7 +1104,9 @@ export function ManagedItemFormFields({
               changeType(event.target.value as ManagementType)
             }
           >
-            {TYPE_OPTIONS.map((option) => (
+            <option value={draft.management_type === "fixed_term_membership" ? "fixed_term_membership" : "recurring_subscription"}>구독·멤버십</option>
+            <option value={draft.management_type === "coupon" || draft.management_type === "voucher" ? draft.management_type : "gifticon"}>쿠폰·교환권</option>
+            {TYPE_OPTIONS.filter((option) => !["recurring_subscription", "fixed_term_membership", "gifticon", "coupon", "voucher"].includes(option.value)).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -984,11 +1116,36 @@ export function ManagedItemFormFields({
         {typeHelp ? <small className="detail-muted">{typeHelp}</small> : null}
       </div>
       <div className="form-card">
-        <h2>{typeLabel(draft.management_type, true)} 정보</h2>
+        <div className="form-card-heading">
+          <h2>{subscriptionType ? "구독·멤버십 정보" : benefitType ? "쿠폰·교환권 정보" : `${typeLabel(draft.management_type, true)} 정보`}</h2>
+          <HelpPopover label="정보 입력 안내">
+            모르는 금액과 날짜는 비워 두고 확인 필요 상태로 저장할 수 있어요.
+          </HelpPopover>
+        </div>
+        {benefitType ? (
+          <>
+            <p className="form-card-description">기프티콘, 할인 쿠폰, 상품권 등을 입력할 수 있어요.</p>
+            <div className="subscription-mode-picker benefit-mode-picker" role="group" aria-label="혜택 방식">
+              <button type="button" className={benefitMode === "exchange" ? "active" : ""} onClick={() => chooseBenefitMode("exchange")}>상품 교환</button>
+              <button type="button" className={benefitMode === "value" ? "active" : ""} onClick={() => chooseBenefitMode("value")}>금액권</button>
+              <button type="button" className={benefitMode === "discount" ? "active" : ""} onClick={() => chooseBenefitMode("discount")}>할인</button>
+              <button type="button" className={benefitMode === "other" ? "active" : ""} onClick={() => chooseBenefitMode("other")}>기타</button>
+            </div>
+          </>
+        ) : null}
+        {subscriptionType ? (
+          <div className="subscription-mode-picker" role="group" aria-label="이용 방식">
+            <button type="button" className={subscriptionMode === "recurring" ? "active" : ""} onClick={() => chooseSubscriptionMode("recurring")}>반복 구독 · 결제</button>
+            <button type="button" className={subscriptionMode === "term" ? "active" : ""} onClick={() => chooseSubscriptionMode("term")}>기간제 멤버십</button>
+            <button type="button" className={subscriptionMode === "trial" ? "active" : ""} onClick={() => chooseSubscriptionMode("trial")}>무료 체험</button>
+          </div>
+        ) : null}
         <Field
           id="item-name"
           label={
-            draft.management_type === "warranty"
+              benefitType
+                ? "이름"
+                : draft.management_type === "warranty"
               ? "제품명"
               : draft.management_type === "other_payment_deadline"
                 ? "결제 이름"
@@ -1006,6 +1163,31 @@ export function ManagedItemFormFields({
             id="item-name"
             required
             value={draft.service_name}
+              placeholder={
+                points
+                  ? "예: 네이버페이, CJ ONE"
+                  : draft.management_type === "warranty"
+                    ? "예: 아이폰 16, LG 냉장고"
+                    : draft.management_type === "other_payment_deadline"
+                      ? "예: 월세, 통신비, 노트북 할부"
+                      : draft.management_type === "other_deadline"
+                        ? "예: 여권 만료, TOEIC 성적 유효기간"
+                  : benefitType
+                  ? benefitMode === "exchange"
+                    ? "예: 아메리카노 교환권"
+                    : benefitMode === "value"
+                      ? "예: 상품권 5만 원권"
+                      : benefitMode === "discount"
+                        ? "예: 20% 할인 쿠폰"
+                        : ""
+                  : subscriptionType
+                  ? subscriptionMode === "recurring"
+                    ? "예: 넷플릭스, ChatGPT"
+                    : subscriptionMode === "term"
+                      ? "예: 헬스장, 코스트코 멤버십"
+                      : "예: 듀오링고 무료 체험"
+                  : undefined
+              }
             maxLength={120}
             onChange={(event) => update("service_name", event.target.value)}
           />
@@ -1015,6 +1197,9 @@ export function ManagedItemFormFields({
           update={update}
           errors={errors}
           imageFilledFields={imageFilledFields}
+          amountHistoryControl={amountHistoryControl}
+          subscriptionMode={subscriptionMode}
+          benefitMode={benefitMode}
         />
       </div>
       <div className="form-card">
@@ -1042,7 +1227,6 @@ export function ManagedItemFormFields({
             <select
               id="item-reminder"
               value={draft.reminder_days_before.join(",") || "none"}
-              disabled={!draft.target_date_value}
               onChange={(event) =>
                 update(
                   "reminder_days_before",
@@ -1064,7 +1248,7 @@ export function ManagedItemFormFields({
               id="item-reminder-time"
               type="time"
               value={draft.reminder_time || "09:00"}
-              disabled={!draft.target_date_value || draft.reminder_days_before.length === 0}
+              disabled={draft.reminder_days_before.length === 0}
               onChange={(event) => update("reminder_time", event.target.value)}
             />
           </Field>
@@ -1082,7 +1266,6 @@ export function ManagedItemFormFields({
             onChange={(event) => update("memo", event.target.value)}
           />
         </Field>
-        {actions}
       </div>
     </>
   );
@@ -1124,6 +1307,14 @@ export function Phase3FormPage({
     new Set(),
   );
   const [attachedImages, setAttachedImages] = useState<ItemImage[]>([]);
+  const [pendingImageDeletes, setPendingImageDeletes] = useState<Set<string>>(new Set());
+  const [applyAmountToPast, setApplyAmountToPast] = useState(false);
+  const [originalPrice, setOriginalPrice] = useState<{
+    amount: number | null;
+    currency: string | null;
+    billingCycle: string | null;
+    historyStart: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!editing || !client || !session || !itemId) return;
@@ -1133,14 +1324,16 @@ export function Phase3FormPage({
       .eq("id", itemId)
       .eq("user_id", session.user.id)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data)
           setNotice({
             tone: "error",
             text: "이 항목을 불러오지 못했어요. 목록에서 다시 선택해 주세요.",
           });
         else {
-          const item = data as ManagedItem;
+          const synced = await syncRecurringItemDates(client, session.user.id, [data as ManagedItem]);
+          const item = synced.items[0];
+          if (synced.failedCount) setNotice({ tone: "info", text: "다음 결제일을 갱신하지 못했어요. 저장된 날짜를 확인해 주세요." });
           setDraft({
             ...createEmptyDraft(item.management_type),
             ...item,
@@ -1152,6 +1345,14 @@ export function Phase3FormPage({
             target_date_precision:
               item.target_date_precision ||
               (item.next_billing_date ? "day" : "day"),
+          });
+          setOriginalPrice({
+            amount: item.amount,
+            currency: item.currency,
+            billingCycle: item.billing_cycle,
+            historyStart:
+              item.first_billing_date ||
+              (item.start_date_precision === "day" ? item.start_date_value : null),
           });
         }
         setLoading(false);
@@ -1270,6 +1471,11 @@ export function Phase3FormPage({
     reader.readAsDataURL(next);
   }
 
+  function removeAttachedImage(image: ItemImage) {
+    setAttachedImages((current) => current.filter((entry) => entry.id !== image.id));
+    setPendingImageDeletes((current) => new Set(current).add(image.id));
+  }
+
   async function ensureImageAsset() {
     if (assetId) return assetId;
     if (!client || !session || !imageFile) throw new Error("이미지를 선택해 주세요.");
@@ -1359,8 +1565,38 @@ export function Phase3FormPage({
       if (result.error || !result.data) throw result.error;
       const persistedId = (result.data as ManagedItem).id;
       setSavedItemId(persistedId);
+      const priceChanged = Boolean(
+        originalPrice &&
+          (originalPrice.amount !== draft.amount ||
+            originalPrice.currency !== draft.currency ||
+            originalPrice.billingCycle !== draft.billing_cycle),
+      );
+      if (editing && priceChanged && isPaymentScheduleType(draft.management_type)) {
+        const historyResult = applyAmountToPast && draft.amount !== null && draft.currency
+          ? await client.rpc("apply_item_price_history_to_all", {
+              p_item_id: persistedId,
+              p_amount: draft.amount,
+              p_currency: draft.currency,
+            })
+          : await client.rpc("apply_item_price_change_from_current_month", {
+              p_item_id: persistedId,
+              p_previous_amount: originalPrice?.amount,
+              p_previous_currency: originalPrice?.currency,
+              p_previous_billing_cycle: originalPrice?.billingCycle,
+              p_history_start: originalPrice?.historyStart,
+            });
+        if (historyResult.error) throw historyResult.error;
+      }
       if (imageMode && nextAssetId)
         await confirmImage(session.access_token, nextAssetId, persistedId, keepOriginal);
+      if (pendingImageDeletes.size) {
+        const results = await Promise.allSettled(
+          [...pendingImageDeletes].map((imageId) => changeImageLifecycle(session.access_token, imageId, "trash")),
+        );
+        if (results.some((result) => result.status === "rejected")) {
+          setNotice({ tone: "info", text: "항목은 저장했지만 일부 이미지 삭제에 실패했어요. 이미지 관리에서 다시 확인해 주세요." });
+        }
+      }
       navigate(`/items/${persistedId}`, true);
     } catch (error) {
       setNotice({
@@ -1376,12 +1612,26 @@ export function Phase3FormPage({
   }
 
   if (loading) return <PageLoading label="관리 항목을 불러오는 중" />;
-  const title = `${typeLabel(draft.management_type, true)} ${editing ? "수정" : "등록"}`;
+  const title = `${draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership" ? "구독·멤버십" : typeLabel(draft.management_type, true)} ${editing ? "수정" : "등록"}`;
+  const formDescription =
+    draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership"
+      ? "넷플릭스, ChatGPT, 네이버 멤버십 등을 입력할 수 있어요."
+      : draft.management_type === "gifticon" || draft.management_type === "coupon" || draft.management_type === "voucher"
+        ? "기프티콘, 할인 쿠폰, 상품권 등을 입력할 수 있어요."
+        : draft.management_type === "points"
+          ? "OK캐쉬백, CJ ONE, Google Play Points 등을 입력할 수 있어요."
+          : draft.management_type === "warranty"
+            ? "AppleCare+, 가전 제품 보증기간 등을 입력할 수 있어요."
+            : draft.management_type === "other_payment_deadline"
+              ? "월세, 통신비, 할부 등을 입력할 수 있어요."
+              : draft.management_type === "other_deadline"
+                ? "여권 만료, TOEIC 성적 유효기간 등을 입력할 수 있어요."
+                : "확인한 정보부터 입력하세요. 모르는 금액과 날짜는 비워 둘 수 있어요.";
   return (
     <div className="app-shell items-shell">
       {navigation}
       <main className="subscription-page phase3-page">
-        <PageHeader className="form-page-heading" eyebrow={editing ? "항목 수정" : "새 항목"} title={title} description="확인한 정보부터 입력하세요. 모르는 금액과 날짜는 비워 둘 수 있어요." />
+        <PageHeader className="form-page-heading" eyebrow={editing ? "항목 수정" : "새 항목"} title={title} description={formDescription} />
         <NoticeBox notice={notice} />
         <form onSubmit={save} className="subscription-layout">
           <section className="subscription-main">
@@ -1397,6 +1647,20 @@ export function Phase3FormPage({
                   : undefined
               }
               imageFilledFields={imageFilledFields}
+              amountHistoryControl={
+                editing && isPaymentScheduleType(draft.management_type) ? (
+                  <label className="amount-history-option">
+                    <input
+                      type="checkbox"
+                      checked={applyAmountToPast}
+                      onChange={(event) => setApplyAmountToPast(event.target.checked)}
+                    />
+                    <span>
+                      <strong>과거 금액 모두 변경</strong>
+                    </span>
+                  </label>
+                ) : undefined
+              }
               actions={
                 <div className="form-actions">
                   <button
@@ -1409,11 +1673,7 @@ export function Phase3FormPage({
                         <span className="button-spinner" />
                         저장 중
                       </>
-                    ) : editing ? (
-                      "수정 저장"
-                    ) : (
-                      `${typeLabel(draft.management_type, true)} 저장`
-                    )}
+                    ) : editing ? "수정" : "등록"}
                   </button>
                   <Link
                     to={editing && itemId ? `/items/${itemId}` : "/items"}
@@ -1433,7 +1693,11 @@ export function Phase3FormPage({
                   <p>
                     {editing
                       ? "새 원본 이미지를 이 관리 항목에 보관할 수 있어요."
-                      : `이미지를 분석한 뒤 ${typeLabel(draft.management_type, true)} 직접 등록 폼에서 확인하고 저장하세요.`}
+                      : <>
+                          이미지를 함께 등록하세요.
+                          <br />
+                          이미지를 분석하면 자동으로 정보가 입력됩니다.
+                        </>}
                   </p>
                 </div>
                 <button
@@ -1453,23 +1717,18 @@ export function Phase3FormPage({
                     <div className="attached-image-section">
                       <strong>현재 보관 중인 이미지</strong>
                       <div className="detail-image-grid">
-                        {attachedImages.map((image) =>
-                          image.signed_url ? (
-                            <a
-                              key={image.id}
-                              href={image.signed_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="detail-image-preview"
-                            >
-                              <img src={image.signed_url} alt="현재 보관 중인 원본" />
-                            </a>
-                          ) : (
-                            <div key={image.id} className="detail-image-preview unavailable">
-                              미리보기를 불러올 수 없어요.
-                            </div>
-                          ),
-                        )}
+                        {attachedImages.map((image) => (
+                          <div key={image.id} className="image-preview-wrap">
+                            {image.signed_url ? (
+                              <a href={image.signed_url} target="_blank" rel="noreferrer" className="detail-image-preview">
+                                <img src={image.signed_url} alt="현재 보관 중인 원본" />
+                              </a>
+                            ) : (
+                              <div className="detail-image-preview unavailable">미리보기를 불러올 수 없어요.</div>
+                            )}
+                            <button type="button" className="image-remove-button" aria-label="이미지 삭제" onClick={() => removeAttachedImage(image)}>×</button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ) : null}
@@ -1480,7 +1739,7 @@ export function Phase3FormPage({
                       onChange={(event) => chooseImage(event.target.files?.[0] || null)}
                     />
                     {imagePreview ? (
-                      <img src={imagePreview} alt="선택한 원본 미리보기" />
+                      <div className="image-preview-wrap selected-image-preview"><img src={imagePreview} alt="선택한 원본 미리보기" /><button type="button" className="image-remove-button" aria-label="이미지 삭제" onClick={() => chooseImage(null)}>×</button></div>
                     ) : (
                       <span>JPEG, PNG, WebP 이미지 선택<br />최대 10MB</span>
                     )}
@@ -1516,6 +1775,16 @@ export function Phase3FormPage({
                 </div>
               ) : null}
             </section>
+            <section className="form-actions-card">
+              <div className="form-actions">
+                <button className="button primary" type="submit" disabled={busy}>
+                  {busy ? <><span className="button-spinner" /> 저장 중</> : editing ? "수정" : "등록"}
+                </button>
+                <Link to={editing && itemId ? `/items/${itemId}` : "/items"} className="button secondary">
+                  취소
+                </Link>
+              </div>
+            </section>
             <Info title="확인 필요로 저장할 수 있어요">
               정확한 금액·날짜가 없으면 집계와 일정에서 제외되지만 등록을 막지
               않아요.
@@ -1545,12 +1814,21 @@ export function Phase3DetailPage({
   const { client, session } = useAuth();
   const [item, setItem] = useState<ManagedItem | null>(null);
   const [images, setImages] = useState<ItemImage[]>([]);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [imagesLoading, setImagesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [reminderSaving, setReminderSaving] = useState(false);
+  const [pricePeriods, setPricePeriods] = useState<PricePeriod[]>([]);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecordOverride[]>([]);
+  const [receiptEdits, setReceiptEdits] = useState<Record<string, { paymentDate: string; amount: string }>>({});
+  const [editingUsageHistory, setEditingUsageHistory] = useState(false);
+  const [receiptSaving, setReceiptSaving] = useState(false);
+  const [timezone, setTimezone] = useState("Asia/Seoul");
+  const [showUsageDetails, setShowUsageDetails] = useState(false);
   const [relationships, setRelationships] = useState<Array<{
     id: string;
     parent_item_id: string;
@@ -1569,16 +1847,49 @@ export function Phase3DetailPage({
       .eq("id", itemId)
       .eq("user_id", session.user.id)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data)
           setNotice({
             tone: "error",
             text: "항목을 불러오지 못했어요. 다른 사용자의 항목에는 접근할 수 없어요.",
           });
-        else setItem(data as ManagedItem);
+        else {
+          const synced = await syncRecurringItemDates(client, session.user.id, [data as ManagedItem]);
+          setItem(synced.items[0]);
+          if (synced.failedCount) setNotice({ tone: "info", text: "다음 결제일을 갱신하지 못했어요. 잠시 후 다시 시도해 주세요." });
+        }
         setLoading(false);
       });
   }, [client, itemId, session]);
+
+  useEffect(() => {
+    if (!client || !session || !item) return;
+    const tracksRecurringCost =
+      isPaymentScheduleType(item.management_type) ||
+      item.management_type === "fixed_term_membership";
+    if (!tracksRecurringCost) {
+      setPricePeriods([]);
+      setPaymentRecords([]);
+      return;
+    }
+    Promise.all([
+      client
+        .from("item_price_periods")
+        .select("item_id,amount,currency,billing_cycle,effective_from,effective_to")
+        .eq("user_id", session.user.id)
+        .eq("item_id", item.id),
+      client
+        .from("item_payment_records")
+        .select("occurrence_date,payment_date,amount,currency")
+        .eq("user_id", session.user.id)
+        .eq("item_id", item.id),
+      client.from("profiles").select("timezone").eq("id", session.user.id).single(),
+    ]).then(([periodResult, recordResult, profileResult]) => {
+      setPricePeriods((periodResult.data || []) as PricePeriod[]);
+      setPaymentRecords((recordResult.data || []) as PaymentRecordOverride[]);
+      setTimezone(profileResult.data?.timezone || "Asia/Seoul");
+    });
+  }, [client, item, session]);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -1624,12 +1935,18 @@ export function Phase3DetailPage({
         );
         if (!active) return;
         setImages(resolved);
+        setActiveImageIndex((current) => Math.min(current, Math.max(0, resolved.length - 1)));
         setImagesLoading(false);
       });
     return () => {
       active = false;
     };
   }, [client, itemId, session]);
+
+  function moveStoredImage(direction: -1 | 1) {
+    if (images.length < 2) return;
+    setActiveImageIndex((current) => (current + direction + images.length) % images.length);
+  }
 
   async function markUsed() {
     if (!client || !session || !item || completing) return;
@@ -1688,6 +2005,123 @@ export function Phase3DetailPage({
     }
   }
 
+  async function cancelUsed() {
+    if (!client || !session || !item || completing) return;
+    setCompleting(true);
+    const result = await client
+      .from("items")
+      .update({ lifecycle_status: "unused", completed_at: null })
+      .eq("id", item.id)
+      .eq("user_id", session.user.id)
+      .select()
+      .single();
+    if (result.error || !result.data) {
+      setCompleting(false);
+      setNotice({ tone: "error", text: "사용 완료 상태를 취소하지 못했어요. 다시 시도해 주세요." });
+      return;
+    }
+
+    const linked = await client
+      .from("image_assets")
+      .select("id,storage_path,mime_type,created_at")
+      .eq("item_id", item.id)
+      .eq("user_id", session.user.id)
+      .eq("lifecycle_status", "trash")
+      .eq("original_status", "kept");
+    const restored = linked.error
+      ? []
+      : await Promise.allSettled(
+          (linked.data || []).map((image) =>
+            changeImageLifecycle(session.access_token, image.id, "restore"),
+          ),
+        );
+    const restoredImages = await Promise.all(
+      restored.flatMap((entry, index) => {
+        const image = linked.data?.[index];
+        if (entry.status !== "fulfilled" || !image) return [];
+        return [
+          client.storage
+            .from("user-images")
+            .createSignedUrl(image.storage_path, 300)
+            .then((preview) => ({
+              ...image,
+              signed_url: preview.error ? null : preview.data.signedUrl,
+            }) as ItemImage),
+        ];
+      }),
+    );
+    setCompleting(false);
+    setItem(result.data as ManagedItem);
+    setImages((current) => {
+      const restoredIds = new Set(restoredImages.map((image) => image.id));
+      return [...restoredImages, ...current.filter((image) => !restoredIds.has(image.id))];
+    });
+    const restoreFailed = Boolean(linked.error) || restored.some((entry) => entry.status === "rejected");
+    setNotice({
+      tone: restoreFailed ? "info" : "success",
+      text: restoreFailed
+        ? "사용 완료는 취소했지만 일부 이미지를 복원하지 못했어요. 이미지 관리에서 확인해 주세요."
+        : "사용 완료를 취소했어요.",
+    });
+  }
+
+  async function toggleReminder() {
+    if (!client || !session || !item || reminderSaving) return;
+    const targetDate = item.target_date_value || item.next_billing_date;
+    if (!targetDate) return;
+    const enabled = (item.reminder_days_before || []).length > 0;
+    const reminderDays = enabled ? [] : [3, 0];
+    setReminderSaving(true);
+    const result = await client
+      .from("items")
+      .update({ reminder_days_before: reminderDays })
+      .eq("id", item.id)
+      .eq("user_id", session.user.id)
+      .select()
+      .single();
+    setReminderSaving(false);
+    if (result.error || !result.data) {
+      setNotice({ tone: "error", text: "알림 설정을 변경하지 못했어요. 다시 시도해 주세요." });
+      return;
+    }
+    setItem(result.data as ManagedItem);
+    setNotice({ tone: "success", text: enabled ? "알림을 껐어요." : "알림을 켰어요." });
+  }
+
+  async function savePaymentRecords(receipts: PaymentReceipt[]) {
+    if (!client || !session || !item || receiptSaving) return;
+    const today = todayInTimeZone(timezone);
+    const records = receipts.map((receipt) => {
+      const edit = receiptEdits[receipt.occurrenceDate];
+      return {
+        user_id: session.user.id,
+        item_id: item.id,
+        occurrence_date: receipt.occurrenceDate,
+        payment_date: edit?.paymentDate || receipt.eventDate,
+        amount: Number(edit?.amount ?? receipt.amount),
+        currency: receipt.currency,
+      };
+    });
+    if (records.some((record) => !record.payment_date || record.payment_date > today || !Number.isFinite(record.amount) || record.amount < 0)) {
+      setNotice({ tone: "error", text: "오늘 이전 날짜와 0 이상의 금액을 확인해 주세요." });
+      return;
+    }
+    setReceiptSaving(true);
+    const result = await client
+      .from("item_payment_records")
+      .upsert(records, { onConflict: "item_id,occurrence_date" })
+      .select("occurrence_date,payment_date,amount,currency");
+    setReceiptSaving(false);
+    if (result.error || !result.data) {
+      setNotice({ tone: "error", text: "이용 기록을 수정하지 못했어요. 다시 시도해 주세요." });
+      return;
+    }
+    setPaymentRecords(result.data as PaymentRecordOverride[]);
+    setReceiptEdits({});
+    setEditingUsageHistory(false);
+    setNotice({ tone: "success", text: "이용 기록의 날짜와 금액을 수정했어요." });
+  }
+
   async function remove() {
     if (!client || !session || !item || deleting) return;
     if (relationships.length) {
@@ -1699,7 +2133,7 @@ export function Phase3DetailPage({
       return;
     }
     setDeleting(true);
-    setNotice({ tone: "info", text: "내부 항목 삭제를 처리하고 있어요." });
+    setNotice({ tone: "info", text: "삭제를 처리하고 있어요." });
     const linkedImages = await client
       .from("image_assets")
       .select("id,lifecycle_status")
@@ -1831,11 +2265,33 @@ export function Phase3DetailPage({
   const target = item.target_date_value || item.next_billing_date;
   const targetPrecision =
     item.target_date_precision || (item.next_billing_date ? "day" : null);
+  const reminderDays = item.reminder_days_before || [];
+  const reminderEnabled = Boolean(target && reminderDays.length);
+  const reminderDispatch = reminderDays
+    .map((day) => (day === 0 ? "당일" : `${day}일 전`))
+    .join(" · ");
+  const detailDday = target ? formatDday(target, targetPrecision) : null;
+  const today = todayInTimeZone(timezone);
+  const cumulativeMonths = item.start_date_value?.length === 7
+    ? Math.max(
+        0,
+        (Number(today.slice(0, 4)) - Number(item.start_date_value.slice(0, 4))) * 12 +
+          Number(today.slice(5, 7)) - Number(item.start_date_value.slice(5, 7)),
+      )
+    : monthsBetween(item.start_date_value, today);
+  const paymentReceipts = buildPaymentReceipts(item, pricePeriods, today, paymentRecords);
+  const cumulativeTotals = paymentReceipts.reduce<Record<string, number>>((totals, receipt) => {
+    totals[receipt.currency] = (totals[receipt.currency] || 0) + receipt.amount;
+    return totals;
+  }, {});
+  const cumulativeAmountText = Object.entries(cumulativeTotals)
+    .map(([currency, amount]) => formatMoneyValue(amount, currency))
+    .join(" · ");
   return (
     <div className="app-shell items-shell">
       {navigation}
       <main className="detail-page phase3-page">
-        <PageHeader className="detail-page-heading" eyebrow={`${recurring ? "구독" : "생활 기한"} · ${typeLabel(item.management_type, true)}`} title={item.service_name || "이름 확인 필요"} description={item.plan_name || item.provider_name || "등록한 핵심 정보와 연결 상태를 확인하세요."} actions={<div className="items-actions">{canMarkUsed(item.management_type) && item.lifecycle_status !== "used" ? <button type="button" className="button primary" onClick={markUsed} disabled={completing}>{completing ? "저장 중" : "사용 완료"}</button> : null}<Link to={`/items/${item.id}/edit`} className="button secondary">수정</Link><button type="button" className="button secondary danger-text" onClick={() => setDeleteConfirm((value) => !value)} disabled={deleting}>삭제</button></div>} />
+        <PageHeader className="detail-page-heading" title={item.service_name || "이름 확인 필요"} description={item.plan_name || item.provider_name || "등록한 핵심 정보와 연결 상태를 확인하세요."} actions={<div className="items-actions">{canMarkUsed(item.management_type) ? item.lifecycle_status === "used" ? <button type="button" className="button usage-cancel-button" onClick={cancelUsed} disabled={completing}>{completing ? "저장 중" : "사용 취소"}</button> : <button type="button" className="button primary" onClick={markUsed} disabled={completing}>{completing ? "저장 중" : "사용 완료"}</button> : null}<Link to={`/items/${item.id}/edit`} className="button secondary">수정</Link><button type="button" className="button secondary danger-text" onClick={() => setDeleteConfirm((value) => !value)} disabled={deleting}>삭제</button></div>} />
         <NoticeBox notice={notice} />
         {deleteConfirm ? (
           <section
@@ -1850,10 +2306,8 @@ export function Phase3DetailPage({
               <li>
                 미래 내부 일정과 미발송 알림은 항목과 함께 정리됩니다.
               </li>
-              <li>
-                연결 이미지는 휴지통으로 이동합니다. Google 일정은 아직 연결되지
-                않았어요.
-              </li>
+              <li>연결 이미지는 휴지통으로 이동합니다.</li>
+              <li>Google 연동 시 일정을 삭제합니다.</li>
               <li>
                 결합 관계가 있는 항목은 삭제되지 않아요. 리포트에서 관계를 먼저
                 해제해야 합니다.
@@ -1867,7 +2321,7 @@ export function Phase3DetailPage({
                 onClick={remove}
                 disabled={deleting}
               >
-                {deleting ? "삭제 중" : "내부 항목 삭제"}
+                {deleting ? "삭제 중" : "삭제"}
               </button>
               <button
                 type="button"
@@ -1882,15 +2336,16 @@ export function Phase3DetailPage({
         ) : null}
         <div className="detail-layout">
           <section className="detail-main">
-            <section className="detail-card">
-              <h2>{target ? "확인한 기한" : "기한 확인 필요"}</h2>
+            <section className="detail-card detail-deadline-card">
               <span className="status-badge">{statusLabel(item)}</span>
-              <strong className="detail-amount">
-                {target
-                  ? displayDate(target, targetPrecision)
-                  : "날짜 확인 필요"}
+              <strong className={`detail-amount detail-dday${detailDday ? ` ${detailDday.tone}` : ""}`}>
+                {detailDday?.label || "D-day 확인 필요"}
               </strong>
               <dl>
+                <div>
+                  <dt>{isPaymentScheduleType(item.management_type) ? "다음 결제일" : "만료일"}</dt>
+                  <dd>{target ? displayDate(target, targetPrecision) : "날짜 확인 필요"}</dd>
+                </div>
                 <div>
                   <dt>
                     {item.management_type === "points"
@@ -1952,8 +2407,8 @@ export function Phase3DetailPage({
               ) : null}
             </section>
             {recurring ? (
-              <section className="detail-card">
-                <h2>독립적으로 관리하는 상태</h2>
+              <section className="detail-card detail-status-card">
+                <h2>이용 상태 · 갱신 · 계획</h2>
                 <dl>
                   <div>
                     <dt>실제 이용 상태</dt>
@@ -2024,23 +2479,42 @@ export function Phase3DetailPage({
             </section>
           </section>
           <aside className="detail-side">
-            <section className="detail-card">
-              <h2>알림</h2>
-              <p>
-                {target
-                  ? (item.reminder_days_before || []).length
-                    ? `${item.reminder_days_before.join("일 전 · ")}일 · ${item.reminder_time.slice(0, 5)}`
-                    : "알림 없음"
-                  : "날짜 미확인 · 알림 없음"}
-              </p>
+            <section className="detail-card detail-reminder-card">
+              <div className="detail-reminder-header">
+                <h2>알림</h2>
+                <button
+                  type="button"
+                  className="detail-reminder-toggle"
+                  role="switch"
+                  aria-checked={reminderEnabled}
+                  aria-label={reminderEnabled ? "알림 끄기" : "알림 켜기"}
+                  disabled={!target || reminderSaving}
+                  onClick={toggleReminder}
+                >
+                  <span aria-hidden="true" />
+                </button>
+              </div>
+              <div className="detail-reminder-values">
+                <div>
+                  <span>알림 발송</span>
+                  <strong>{target ? (reminderEnabled ? reminderDispatch : "알림 없음") : "날짜 미확인"}</strong>
+                </div>
+                <div>
+                  <span>발송 시간</span>
+                  <strong>{reminderEnabled ? (item.reminder_time || "09:00").slice(0, 5) : "—"}</strong>
+                </div>
+              </div>
             </section>
             <section className="detail-card">
               <h2>보관 이미지</h2>
               {imagesLoading ? (
                 <p className="detail-muted">이미지를 불러오는 중…</p>
               ) : images.length ? (
-                <div className="detail-image-grid">
-                  {images.map((image) =>
+                <div className="detail-image-carousel">
+                  {images.length > 1 ? (
+                    <button type="button" className="detail-image-nav previous" aria-label="이전 보관 이미지" onClick={() => moveStoredImage(-1)}>‹</button>
+                  ) : null}
+                  {images.map((image, imageIndex) =>
                     image.signed_url ? (
                       <a
                         key={image.id}
@@ -2048,29 +2522,161 @@ export function Phase3DetailPage({
                         target="_blank"
                         rel="noreferrer"
                         className="detail-image-preview"
+                        data-active={imageIndex === activeImageIndex}
                       >
                         <img src={image.signed_url} alt="보관된 원본 이미지" />
                       </a>
                     ) : (
-                      <div key={image.id} className="detail-image-preview unavailable">
+                      <div key={image.id} className="detail-image-preview unavailable" data-active={imageIndex === activeImageIndex}>
                         미리보기를 불러올 수 없어요.
                       </div>
                     ),
                   )}
+                  {images.length > 1 ? (
+                    <button type="button" className="detail-image-nav next" aria-label="다음 보관 이미지" onClick={() => moveStoredImage(1)}>›</button>
+                  ) : null}
                 </div>
               ) : (
-                <div className="empty-state compact">
+                <div className="empty-state compact detail-image-empty">
                   <strong>보관된 이미지가 없어요</strong>
-                  <p>직접 등록했거나 원본 보관을 선택하지 않은 항목이에요.</p>
+                  <p>수정을 통해 추가할 수 있어요.</p>
                 </div>
               )}
               <Link to="/images" className="button secondary detail-image-manage">
                 이미지 관리·휴지통
               </Link>
             </section>
+            {recurring ? (
+              <section className="detail-card detail-cumulative-card">
+                <div className="detail-cumulative-header">
+                  <h2>이용 누적</h2>
+                  <button
+                    type="button"
+                    className="detail-usage-button"
+                    aria-label="세부 정보 보기"
+                    onClick={() => setShowUsageDetails(true)}
+                  >
+                    <img src={historyQueryIcon} alt="" aria-hidden="true" />
+                  </button>
+                </div>
+                <dl>
+                  <div>
+                    <dt>누적 개월</dt>
+                    <dd>{cumulativeMonths === null ? "시작일 확인 필요" : `${cumulativeMonths.toFixed(1)}개월`}</dd>
+                  </div>
+                  <div>
+                    <dt>누적 금액</dt>
+                    <dd>{cumulativeAmountText || "계산할 결제 기록 없음"}</dd>
+                  </div>
+                </dl>
+              </section>
+            ) : null}
             <ItemSupportContent itemId={item.id} />
           </aside>
         </div>
+        {showUsageDetails ? (
+          <div className="detail-receipt-backdrop" role="presentation" onMouseDown={() => { setShowUsageDetails(false); setEditingUsageHistory(false); setReceiptEdits({}); }}>
+            <section
+              className="detail-receipt-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="usage-history-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <header>
+                <div>
+                  <h2 id="usage-history-title">이용 기록</h2>
+                  <p>등록된 결제 일정과 가격 변경 이력을 기준으로 계산해요.</p>
+                </div>
+                <button type="button" aria-label="이용 기록 닫기" onClick={() => { setShowUsageDetails(false); setEditingUsageHistory(false); setReceiptEdits({}); }}>×</button>
+              </header>
+              {paymentReceipts.length ? (
+                <div className="detail-receipt-list">
+                  {[...paymentReceipts].reverse().map((receipt) => (
+                    <div
+                      key={receipt.occurrenceDate}
+                      className={editingUsageHistory ? "is-editing" : undefined}
+                    >
+                      {editingUsageHistory ? (
+                        <>
+                          <input
+                            type="date"
+                            max={today}
+                            aria-label={`${receipt.occurrenceDate} 결제 날짜`}
+                            value={receiptEdits[receipt.occurrenceDate]?.paymentDate ?? receipt.eventDate}
+                            onChange={(event) =>
+                              setReceiptEdits((current) => ({
+                                ...current,
+                                [receipt.occurrenceDate]: {
+                                  paymentDate: event.target.value,
+                                  amount: current[receipt.occurrenceDate]?.amount ?? String(receipt.amount),
+                                },
+                              }))
+                            }
+                          />
+                          <span className="detail-receipt-amount">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              aria-label={`${receipt.occurrenceDate} 결제 금액`}
+                              value={receiptEdits[receipt.occurrenceDate]?.amount ?? String(receipt.amount)}
+                              onChange={(event) =>
+                                setReceiptEdits((current) => ({
+                                  ...current,
+                                  [receipt.occurrenceDate]: {
+                                    paymentDate: current[receipt.occurrenceDate]?.paymentDate ?? receipt.eventDate,
+                                    amount: event.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                            <b>{receipt.currency}</b>
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{displayDate(receipt.eventDate, "day")}</span>
+                          <strong>{formatMoneyValue(receipt.amount, receipt.currency)}</strong>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="detail-receipt-empty">
+                  <strong>계산할 결제 기록이 없어요.</strong>
+                  <p>첫 결제일과 월·연 결제 주기, 금액을 확인해 주세요.</p>
+                </div>
+              )}
+              <footer>
+                <span>누적 금액</span>
+                <strong>{cumulativeAmountText || "계산할 정보 없음"}</strong>
+              </footer>
+              <div className="detail-receipt-note-row">
+                <small>실제 결제 내역이 아니라 등록된 일정 기준 예상 기록입니다.</small>
+                <button
+                  type="button"
+                  className="detail-receipt-edit"
+                  disabled={!paymentReceipts.length || receiptSaving}
+                  onClick={() => {
+                    if (editingUsageHistory) {
+                      void savePaymentRecords(paymentReceipts);
+                      return;
+                    }
+                    setReceiptEdits(Object.fromEntries(paymentReceipts.map((receipt) => [
+                      receipt.occurrenceDate,
+                      { paymentDate: receipt.eventDate, amount: String(receipt.amount) },
+                    ])));
+                    setEditingUsageHistory(true);
+                  }}
+                >
+                  {receiptSaving ? "저장 중" : editingUsageHistory ? "저장" : "수정"}
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </main>
     </div>
   );

@@ -543,7 +543,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
           eyebrow="이미지 보관"
           title="이미지 관리"
           description="보관 중인 이미지를 확인할 수 있어요."
-          actions={<div className="items-actions"><Link to="/items" className="button secondary"><img className="button-icon" src={navListIcon} alt="" />전체 목록</Link></div>}
+          actions={<div className="home-actions image-library-header-actions"><Link to="/items" className="button secondary"><img className="button-icon" src={navListIcon} alt="" />전체 목록</Link></div>}
         />
         {notice ? (
           <div className={`notice ${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}>

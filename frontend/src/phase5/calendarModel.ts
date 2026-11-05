@@ -31,11 +31,39 @@ export const CALENDAR_KIND_LABELS: Record<CalendarEventKind, string> = {
 
 export const CALENDAR_KIND_GROUPS = [
   { key: "billing", label: "결제·갱신", kinds: ["payment", "renewal"] },
-  { key: "decision", label: "해지·검토", kinds: ["cancellation", "review"] },
-  { key: "ending", label: "만료·보장 종료", kinds: ["expiry", "warranty"] },
+  { key: "ending", label: "기한 만료", kinds: ["expiry", "warranty"] },
 ] as const satisfies ReadonlyArray<{ key: string; label: string; kinds: readonly CalendarEventKind[] }>;
 
 const BENEFIT_TYPES = new Set<ManagementType>(["gifticon", "coupon", "voucher", "points"]);
+
+function anchoredMonthDate(anchor: string, months: number) {
+  const [year, month, day] = anchor.split("-").map(Number);
+  const monthIndex = month - 1 + months;
+  const targetYear = year + Math.floor(monthIndex / 12);
+  const targetMonth = ((monthIndex % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(targetYear, targetMonth, Math.min(day, lastDay)))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function recurringCalendarDates(item: ManagedItem, from: string, to: string) {
+  if (!isPaymentScheduleType(item.management_type)) return [];
+  if (!["in_use", "payment_issue"].includes(item.actual_status) || item.usage_plan === "ended") return [];
+  const anchor = item.first_billing_date || item.target_date_value || item.next_billing_date;
+  const precision = item.first_billing_date || item.target_date_value || item.next_billing_date ? "day" : null;
+  if (!anchor || precision !== "day") return [];
+  if (item.billing_cycle !== "monthly" && item.billing_cycle !== "yearly") return anchor >= from && anchor <= to ? [anchor] : [];
+  if (item.auto_renewal_status !== "on") return anchor >= from && anchor <= to ? [anchor] : [];
+  const step = item.billing_cycle === "yearly" ? 12 : 1;
+  const dates: string[] = [];
+  for (let index = 0; index < 2400; index += 1) {
+    const date = anchoredMonthDate(anchor, index * step);
+    if (date > to) break;
+    if (date >= from) dates.push(date);
+  }
+  return dates;
+}
 
 export function buildCalendarEvents(items: ManagedItem[], from: string, to: string) {
   const horizonDays = Math.max(0, Math.ceil((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
@@ -52,9 +80,24 @@ export function buildCalendarEvents(items: ManagedItem[], from: string, to: stri
   }));
 
   for (const item of items) {
+    if (isPaymentScheduleType(item.management_type)) {
+      for (const date of recurringCalendarDates(item, from, to)) {
+        if (events.some((event) => event.itemId === item.id && event.date === date)) continue;
+        events.push({
+          key: `${item.id}:payment:${date}`,
+          itemId: item.id,
+          kind: "payment",
+          date,
+          name: item.service_name,
+          managementType: item.management_type,
+          amount: item.amount,
+          currency: item.currency,
+        });
+      }
+      continue;
+    }
     if (
-      isPaymentScheduleType(item.management_type) ||
-      BENEFIT_TYPES.has(item.management_type) ||
+      (BENEFIT_TYPES.has(item.management_type) && item.management_type !== "points") ||
       !item.target_date_value ||
       item.target_date_precision !== "day" ||
       item.target_date_value < from ||
@@ -62,9 +105,10 @@ export function buildCalendarEvents(items: ManagedItem[], from: string, to: stri
       ["used", "ended", "expired"].includes(item.lifecycle_status)
     ) continue;
 
+    if (events.some((event) => event.itemId === item.id && event.date === item.target_date_value)) continue;
     const kind: CalendarEventKind = item.management_type === "fixed_term_membership"
       ? item.auto_renewal_status === "on" ? "renewal" : "expiry"
-      : item.management_type === "warranty" ? "warranty" : "review";
+      : item.management_type === "warranty" ? "warranty" : "expiry";
     events.push({
       key: `${item.id}:${kind}:${item.target_date_value}`,
       itemId: item.id,
@@ -72,8 +116,8 @@ export function buildCalendarEvents(items: ManagedItem[], from: string, to: stri
       date: item.target_date_value,
       name: item.service_name,
       managementType: item.management_type,
-      amount: null,
-      currency: null,
+      amount: item.amount,
+      currency: item.currency,
     });
   }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { getAnnouncements, getCollectionStatus, getRelevantNews, type CollectionStatus, type OperatorAnnouncement, type ServiceNews } from "../lib/api";
+import { syncRecurringItemDates } from "../lib/recurringItems";
 import { displayDate, typeLabel, type ManagedItem } from "../phase3/model";
 import { GlassCard, PageHeader } from "../components/ui";
 import galleryIcon from "../assets/figma/gallery.svg";
@@ -40,9 +41,9 @@ function Link({ to, children, className }: { to: string; children: ReactNode; cl
   );
 }
 
-function money(value: number, currency: string) {
+function money(value: number, currency: string, useCurrencyCode = false) {
   const amount = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(value);
-  return currency === "KRW" ? `${amount}원` : `${currency} ${amount}`;
+  return currency === "KRW" && !useCurrencyCode ? `${amount}원` : `${currency} ${amount}`;
 }
 
 function eventAmount(event: HomeScheduleEvent) {
@@ -123,6 +124,7 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
   const { client, session } = useAuth();
   const [items, setItems] = useState<ManagedItem[]>([]);
   const [timezone, setTimezone] = useState("Asia/Seoul");
+  const [defaultCurrency, setDefaultCurrency] = useState("KRW");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | HomeEventKind>("all");
@@ -153,17 +155,22 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
     setLoading(true);
     Promise.all([
       client.from("items").select("*").eq("user_id", session.user.id),
-      client.from("profiles").select("timezone").eq("id", session.user.id).single(),
-    ]).then(([itemResult, profileResult]) => {
+      client.from("profiles").select("timezone,default_currency").eq("id", session.user.id).single(),
+    ]).then(async ([itemResult, profileResult]) => {
       if (!active) return;
       if (itemResult.error || profileResult.error || !profileResult.data) {
         setError("홈 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
         setLoading(false);
         return;
       }
-      setItems((itemResult.data || []) as ManagedItem[]);
-      setTimezone(profileResult.data.timezone || "Asia/Seoul");
-      setCalendarMonth(todayInTimeZone(profileResult.data.timezone || "Asia/Seoul").slice(0, 7));
+      const zone = profileResult.data.timezone || "Asia/Seoul";
+      const synced = await syncRecurringItemDates(client, session.user.id, (itemResult.data || []) as ManagedItem[], zone);
+      if (!active) return;
+      setItems(synced.items);
+      if (synced.failedCount) setError("일부 반복 결제의 다음 결제일을 갱신하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setTimezone(zone);
+      setDefaultCurrency(profileResult.data.default_currency || "KRW");
+      setCalendarMonth(todayInTimeZone(zone).slice(0, 7));
       setLoading(false);
     });
     return () => {
@@ -200,7 +207,7 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
     <div className="app-shell">
       {navigation}
       <main className="unified-home">
-        <PageHeader eyebrow="오늘의 달리" title="다가오는 결제와 기한" description={`이번 달 구독과 기한을 한눈에 확인하세요 · ${displayDate(today, "day")} · ${timezone}`} mascot="moon" actions={<div className="home-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
+        <PageHeader eyebrow="오늘의 달리" title={<><span className="home-title-line">달마다 돌아오는</span>{" "}<span className="home-title-line">구독 · 기한 관리</span></>} description="이번 달 구독과 기한을 한눈에 확인하세요." mascot="moon" actions={<div className="home-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
 
         {error ? <div className="notice error" role="alert">{error}</div> : null}
         {announcements.length ? <section className="home-announcements" aria-label="운영 공지사항"><h2>공지사항</h2>{announcements.map((entry) => <article key={entry.id}><div><strong>{entry.title}</strong><small>{entry.published_at?.slice(0, 10) || entry.created_at.slice(0, 10)}</small></div><p>{entry.body}</p></article>)}</section> : null}
@@ -209,20 +216,19 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
             <GlassCard as="section" className="home-overview-panel" aria-label="다음 30일 요약">
               <article className="home-summary-card primary-summary">
                 <span>앞으로 30일 예정 금액</span>
-                <strong>{money(summary.totals.KRW || 0, "KRW")}</strong>
-                {Object.entries(summary.totals).some(([currency]) => currency !== "KRW") ? (
+                <strong>{money(summary.totals[defaultCurrency] || 0, defaultCurrency)}</strong>
+                {Object.entries(summary.totals).some(([currency]) => currency !== defaultCurrency) ? (
                   <small className="foreign-total-line">
                     {Object.entries(summary.totals)
-                      .filter(([currency]) => currency !== "KRW")
-                      .map(([currency, value], index) => (
-                        <span key={currency}>{index ? " · " : ""}{money(value, currency)}</span>
-                      ))}
+                      .filter(([currency]) => currency !== defaultCurrency)
+                      .map(([currency, value]) => money(value, currency, true))
+                      .join(" · ")}
                   </small>
                 ) : null}
-                {summary.excludedAmountCount ? (
-                  <em>금액 미확인 {summary.excludedAmountCount}건 합계 제외</em>
-                ) : null}
-                <p>등록된 일정 기준 예상 금액 · 실제 결제 내역 아님</p>
+                <div className="primary-summary-notes">
+                  <p>날짜 · 금액 미확인 제외</p>
+                  <p>등록된 일정 기준 예상 금액 · 실제 결제 내역 아님</p>
+                </div>
               </article>
               <div className="home-overview-metrics">
                 <article className="home-summary-card">
@@ -231,9 +237,9 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
                   <p>{displayDate(summary.end, "day")}까지</p>
                 </article>
                 <article className="home-summary-card">
-                  <span>만료 예정 혜택</span>
+                  <span>기한 만료 예정</span>
                   <strong>{summary.benefitCount}<small>건</small></strong>
-                  <p>정확한 만료일 기준</p>
+                  <p>30일 이내의 기프티콘, 쿠폰, 상품권, 포인트, 보증, 기타 기한</p>
                 </article>
               </div>
             </GlassCard>
@@ -311,8 +317,11 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
                     <div className="selected-date-panel">
                       <strong>{displayDate(selectedDate, "day")}</strong>
                       {dateEvents.length ? dateEvents.map((event) => (
-                        <button type="button" key={event.key} onClick={() => navigate(`/items/${event.itemId}`)}>{event.name} · {event.kind === "payment" ? "결제" : "기한 만료"}</button>
-                      )) : <span>이 날짜에 등록된 일정이 없어요.</span>}
+                        <button className="selected-date-event" type="button" key={event.key} onClick={() => navigate(`/items/${event.itemId}`)}>
+                          <i className={event.kind === "payment" ? "payment-dot" : "benefit-dot"} aria-hidden="true" />
+                          <span>{event.name} · {event.kind === "payment" ? "결제" : "기한 만료"}</span>
+                        </button>
+                      )) : <span className="selected-date-empty">이 날짜에 등록된 일정이 없어요.</span>}
                     </div>
                   ) : null}
                 </section>

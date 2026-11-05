@@ -279,6 +279,47 @@ export function proposeNextRecurringDate(
   return candidate.toISOString().slice(0, 10);
 }
 
+export function rollForwardRecurringItem(
+  item: ManagedItem,
+  today: string,
+): ManagedItem {
+  if (
+    !isPaymentScheduleType(item.management_type) ||
+    item.auto_renewal_status !== "on" ||
+    (item.billing_cycle !== "monthly" && item.billing_cycle !== "yearly") ||
+    !["in_use", "payment_issue"].includes(item.actual_status) ||
+    item.usage_plan === "ended"
+  )
+    return item;
+
+  const current = item.target_date_value || item.next_billing_date;
+  const precision = item.target_date_value
+    ? item.target_date_precision
+    : item.next_billing_date
+      ? "day"
+      : null;
+  if (!current || precision !== "day" || current >= today) return item;
+
+  let anchor = current;
+  if (item.first_billing_date && validDateValue(item.first_billing_date, "day")) {
+    const currentParts = current.split("-").map(Number);
+    const firstParts = item.first_billing_date.split("-").map(Number);
+    const currentLastDay = new Date(Date.UTC(currentParts[0], currentParts[1], 0)).getUTCDate();
+    if (currentParts[2] === currentLastDay && firstParts[2] > currentParts[2]) {
+      anchor = item.first_billing_date;
+    }
+  }
+
+  const next = proposeNextRecurringDate(anchor, "day", item.billing_cycle, new Date(`${today}T12:00:00`));
+  if (!next || next === current) return item;
+  return {
+    ...item,
+    target_date_value: next,
+    target_date_precision: "day",
+    next_billing_date: next,
+  };
+}
+
 export function targetSortValue(item: ManagedItem) {
   return item.target_date_value || item.next_billing_date || "9999-12-31";
 }
@@ -288,7 +329,7 @@ export function isMoneyType(type: ManagementType) {
 }
 
 export function canMarkUsed(type: ManagementType) {
-  return type === "gifticon" || type === "coupon" || type === "voucher";
+  return type === "gifticon" || type === "coupon" || type === "voucher" || type === "points";
 }
 
 export function isTargetDateExpired(
@@ -387,9 +428,7 @@ export function buildManagedItemPayload(
             draft.lifecycle_status === "expired"
           ? defaultLifecycleStatus(draft.management_type)
           : draft.lifecycle_status,
-    reminder_days_before: draft.target_date_value
-      ? draft.reminder_days_before
-      : [],
+    reminder_days_before: draft.reminder_days_before,
     first_billing_date:
       isPaymentScheduleType(draft.management_type) ? exactStart : null,
     next_billing_date:

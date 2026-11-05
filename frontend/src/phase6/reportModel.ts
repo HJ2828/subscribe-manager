@@ -31,6 +31,19 @@ export type PricePeriod = {
   effective_from: string;
   effective_to: string | null;
 };
+export type PaymentReceipt = {
+  occurrenceDate: string;
+  eventDate: string;
+  amount: number;
+  currency: string;
+};
+export type PaymentRecordOverride = {
+  occurrence_date: string;
+  payment_date: string;
+  amount: number;
+  currency: string;
+};
+export type PaymentRecord = PaymentRecordOverride & { item_id: string };
 export type ItemStatusHistory = { id:string; item_id:string; event_type:"tracking_started"|"paused"|"ended"|"resumed"|"status_changed"; previous_status:string|null; current_status:string; occurred_on:string };
 
 export type ReportMetricRow = {
@@ -44,6 +57,7 @@ export type ReportMetricRow = {
 
 export type ReportSummary = {
   totalByCurrency: Record<string, number>;
+  pastByCurrency: Record<string, number>;
   remainingByCurrency: Record<string, number>;
   missingAmountCount: number;
   cancelledCount: number;
@@ -61,6 +75,60 @@ export type MonthlyReportPoint = {
 
 function dayNumber(value: string) {
   return Date.parse(`${value}T00:00:00Z`) / 86_400_000;
+}
+
+function anchoredBillingDate(year: number, monthIndex: number, anchorDay: number) {
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, monthIndex, Math.min(anchorDay, lastDay)));
+}
+
+export function buildPaymentReceipts(
+  item: ManagedItem,
+  periods: PricePeriod[],
+  today: string,
+  overrides: PaymentRecordOverride[] = [],
+): PaymentReceipt[] {
+  if (
+    !isPaymentScheduleType(item.management_type) ||
+    (item.billing_cycle !== "monthly" && item.billing_cycle !== "yearly")
+  ) return [];
+  const first = item.first_billing_date ||
+    (item.start_date_precision === "day" ? item.start_date_value : null);
+  if (!first || first.length !== 10 || first > today) return [];
+  const [year, month, day] = first.split("-").map(Number);
+  if (!year || !month || !day) return [];
+  const itemPeriods = periods
+    .filter((period) => period.item_id === item.id)
+    .sort((left, right) => left.effective_from.localeCompare(right.effective_from));
+  const overrideByOccurrence = new Map(
+    overrides.map((override) => [override.occurrence_date, override]),
+  );
+  const receipts: PaymentReceipt[] = [];
+  const stepMonths = item.billing_cycle === "yearly" ? 12 : 1;
+  for (let index = 0; index < 2400; index += 1) {
+    const totalMonth = month - 1 + index * stepMonths;
+    const eventDate = anchoredBillingDate(
+      year + Math.floor(totalMonth / 12),
+      ((totalMonth % 12) + 12) % 12,
+      day,
+    ).toISOString().slice(0, 10);
+    if (eventDate > today) break;
+    const period = itemPeriods.find(
+      (candidate) =>
+        candidate.effective_from <= eventDate &&
+        (!candidate.effective_to || candidate.effective_to >= eventDate),
+    ) || (itemPeriods[0] && eventDate < itemPeriods[0].effective_from ? itemPeriods[0] : undefined);
+    if (period) {
+      const override = overrideByOccurrence.get(eventDate);
+      receipts.push({
+        occurrenceDate: eventDate,
+        eventDate: override?.payment_date || eventDate,
+        amount: override?.amount ?? period.amount,
+        currency: override?.currency || period.currency,
+      });
+    }
+  }
+  return receipts;
 }
 
 export function monthsBetween(start: string | null, end: string) {
@@ -96,13 +164,16 @@ export function summarizeReport(
   start: string,
   end: string,
   today: string,
+  paymentRecords: PaymentRecord[] = [],
 ): ReportSummary {
   const totalByCurrency: Record<string, number> = {};
+  const pastByCurrency: Record<string, number> = {};
   const remainingByCurrency: Record<string, number> = {};
   let missingAmountCount = 0;
   let cancelledCount = 0;
   let duplicateExcludedCount = 0;
   let hasPastSchedules = false;
+  const scheduledPastKeys = new Set<string>();
   for (const event of events) {
     if (event.event_type !== "payment" || event.event_date < start || event.event_date > end) continue;
     if (event.event_date < today) hasPastSchedules = true;
@@ -119,12 +190,25 @@ export function summarizeReport(
       continue;
     }
     totalByCurrency[event.currency] = (totalByCurrency[event.currency] || 0) + event.amount;
-    // Phase 6 policy: a schedule due today is still part of the remaining estimate.
-    if (event.event_date >= today)
+    if (event.event_date < today) {
+      pastByCurrency[event.currency] = (pastByCurrency[event.currency] || 0) + event.amount;
+      scheduledPastKeys.add(`${event.item_id}:${event.event_date}`);
+    }
+    // Today's amount is represented by actual payment records when available;
+    // scheduled events for today are not counted as future estimates.
+    if (event.event_date > today)
       remainingByCurrency[event.currency] = (remainingByCurrency[event.currency] || 0) + event.amount;
+  }
+  for (const record of paymentRecords) {
+    if (record.payment_date < start || record.payment_date > end) continue;
+    if (record.payment_date > today) continue;
+    if (!isCostAttributedToItem(record.item_id, relations)) continue;
+    if (record.payment_date < today && scheduledPastKeys.has(`${record.item_id}:${record.payment_date}`)) continue;
+    pastByCurrency[record.currency] = (pastByCurrency[record.currency] || 0) + record.amount;
   }
   return {
     totalByCurrency,
+    pastByCurrency,
     remainingByCurrency,
     missingAmountCount,
     cancelledCount,
@@ -166,6 +250,38 @@ export function buildMonthlyBreakdown(
     point.count += 1;
   }
   return months;
+}
+
+export function buildDailyBreakdown(
+  events: ReportEvent[],
+  relations: SubscriptionRelationship[],
+  start: string,
+  end: string,
+  today: string,
+  currency: string,
+) {
+  const days: MonthlyReportPoint[] = [];
+  let cursor = start;
+  for (let index = 0; cursor <= end && index < 366; index += 1) {
+    days.push({ month: cursor, past: 0, future: 0, total: 0, count: 0 });
+    cursor = new Date(dayNumber(cursor) * 86_400_000 + 86_400_000).toISOString().slice(0, 10);
+  }
+  const byDay = new Map(days.map((point) => [point.month, point]));
+  for (const event of events) {
+    if (
+      event.event_type !== "payment" || event.event_date < start || event.event_date > end ||
+      event.currency !== currency || event.amount === null ||
+      event.schedule_status === "cancelled" || event.schedule_status === "skipped" ||
+      !isCostAttributedToItem(event.item_id, relations)
+    ) continue;
+    const point = byDay.get(event.event_date);
+    if (!point) continue;
+    if (event.event_date < today) point.past += event.amount;
+    else point.future += event.amount;
+    point.total += event.amount;
+    point.count += 1;
+  }
+  return days;
 }
 
 export function accumulatedFromPricePeriods(

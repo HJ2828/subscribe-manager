@@ -16,6 +16,19 @@ describe("phase 5 calendar model", () => {
     expect(events.map((event) => event.date)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
   });
 
+  it("includes historical recurring payment dates from the first billing date", () => {
+    const events = buildCalendarEvents([item({
+      first_billing_date: "2026-08-01",
+      target_date_value: "2026-12-01",
+      target_date_precision: "day",
+      amount: 100,
+      currency: "USD",
+    })], "2026-08-01", "2026-11-30");
+    expect(events.map((event) => event.date)).toEqual([
+      "2026-08-01", "2026-09-01", "2026-10-01", "2026-11-01",
+    ]);
+  });
+
   it("maps exact non-recurring dates without inventing month precision dates", () => {
     const events = buildCalendarEvents([
       item({ id: "fixed", management_type: "fixed_term_membership", target_date_value: "2026-03-10", target_date_precision: "day" }),

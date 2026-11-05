@@ -9,6 +9,8 @@ import {
   isTargetDateExpired,
   itemStatusValue,
   proposeNextRecurringDate,
+  rollForwardRecurringItem,
+  type ManagedItem,
   validDateValue,
 } from "./model";
 
@@ -78,6 +80,47 @@ describe("Phase 3 D-day labels", () => {
     expect(isPastDate("2026-10", "month", now)).toBe(true);
     expect(isPastDate("2026-11", "month", now)).toBe(false);
     expect(isPastDate(null, "day", now)).toBe(false);
+  });
+});
+
+describe("Phase 3 recurring payment rollover", () => {
+  function recurring(overrides: Partial<ManagedItem> = {}) {
+    return {
+      ...createEmptyDraft("recurring_subscription"),
+      id: "item-1",
+      user_id: "user-1",
+      service_name: "정기 결제",
+      target_date_value: "2026-11-03",
+      target_date_precision: "day",
+      next_billing_date: "2026-11-03",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      completed_at: null,
+      ...overrides,
+    } as ManagedItem;
+  }
+
+  it("moves a passed monthly payment to the next cycle", () => {
+    const rolled = rollForwardRecurringItem(recurring(), "2026-11-04");
+    expect(rolled.target_date_value).toBe("2026-12-03");
+    expect(rolled.next_billing_date).toBe("2026-12-03");
+  });
+
+  it("does not roll dates when automatic renewal is off", () => {
+    const item = recurring({ auto_renewal_status: "off" });
+    expect(rollForwardRecurringItem(item, "2026-11-04")).toBe(item);
+  });
+
+  it("preserves a month-end anchor after February", () => {
+    const rolled = rollForwardRecurringItem(
+      recurring({
+        first_billing_date: "2026-01-31",
+        target_date_value: "2026-02-28",
+        next_billing_date: "2026-02-28",
+      }),
+      "2026-03-01",
+    );
+    expect(rolled.target_date_value).toBe("2026-03-31");
   });
 });
 

@@ -22,6 +22,7 @@ const BENEFIT_TYPES = new Set<ManagementType>([
   "voucher",
   "points",
   "warranty",
+  "other_deadline",
 ]);
 
 function parseDate(value: string) {
