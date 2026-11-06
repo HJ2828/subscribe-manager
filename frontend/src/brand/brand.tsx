@@ -1,8 +1,18 @@
 import { useState } from "react";
-import brandList from "../data/brand-list.json";
+import brandList from "../data/brand-llist.json";
 
 export type BrandRecord = { domain: string; aliases: string[] };
 export type BrandCandidate = { domain: string; name?: string; logo_url?: string | null };
+export type BrandIconTone = "subscription" | "benefit" | "points" | "warranty" | "payment" | "deadline";
+
+export function brandIconTone(managementType: string): BrandIconTone {
+  if (["gifticon", "coupon", "voucher"].includes(managementType)) return "benefit";
+  if (managementType === "points") return "points";
+  if (managementType === "warranty") return "warranty";
+  if (managementType === "other_payment_deadline") return "payment";
+  if (managementType === "other_deadline") return "deadline";
+  return "subscription";
+}
 
 const records = brandList as BrandRecord[];
 
@@ -41,13 +51,16 @@ export function brandLogoUrl(domain: string | null | undefined, logoUrl?: string
   return logoUrl || (domain ? `https://cdn.brandfetch.io/domain/${domain}` : null);
 }
 
-export function BrandIcon({ name, domain, logoUrl, className = "" }: {
+export function BrandIcon({ name, domain, logoUrl, emoji, tone, className = "" }: {
   name: string;
   domain?: string | null;
   logoUrl?: string | null;
+  emoji?: string | null;
+  tone?: BrandIconTone;
   className?: string;
 }) {
   const [sourceIndex, setSourceIndex] = useState(0);
+  const customEmoji = emoji?.trim() || null;
   const resolvedDomain = domain || matchLocalBrands([name])[0]?.domain || null;
   const initial = name.trim().slice(0, 1).toLocaleUpperCase("ko-KR") || "?";
   const sources = [
@@ -55,13 +68,13 @@ export function BrandIcon({ name, domain, logoUrl, className = "" }: {
     resolvedDomain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(resolvedDomain)}&sz=128` : null,
   ].filter(Boolean) as string[];
   const src = sources[sourceIndex] || null;
+  const fallbackClass = !customEmoji ? ` brand-icon-fallback-${tone || "subscription"}` : "";
   function onError() {
     setSourceIndex((current) => current + 1);
   }
   return (
-    <i className={`brand-icon ${className}`} aria-hidden="true">
-      {src ? <img src={src} alt="" onError={onError} /> : null}
-      {!src ? initial : null}
+    <i className={`brand-icon${fallbackClass} ${className}`} aria-hidden="true">
+      {customEmoji ? <span className="brand-icon-emoji">{customEmoji}</span> : src ? <img src={src} alt="" onError={onError} /> : initial}
     </i>
   );
 }

@@ -154,7 +154,7 @@
     ]
   },
   {
-    "domain": "starbucks.co.kr",
+    "domain": "starbucks.com",
     "aliases": [
       "스타벅스",
       "스벅",
@@ -219,14 +219,14 @@
     ]
   },
   {
-    "domain": "gong-cha.co.kr",
+    "domain": "gong-cha.com",
     "aliases": [
       "공차",
       "gongcha"
     ]
   },
   {
-    "domain": "baskinrobbins.co.kr",
+    "domain": "baskinrobbins.com",
     "aliases": [
       "배스킨라빈스",
       "베스킨라빈스",
@@ -244,7 +244,7 @@
     ]
   },
   {
-    "domain": "mcdonalds.co.kr",
+    "domain": "mcdonalds.com",
     "aliases": [
       "맥도날드",
       "맥날",
@@ -252,21 +252,21 @@
     ]
   },
   {
-    "domain": "burgerking.co.kr",
+    "domain": "bk.com",
     "aliases": [
       "버거킹",
       "burgerking"
     ]
   },
   {
-    "domain": "lotteria.com",
+    "domain": "lotteriausa.com",
     "aliases": [
       "롯데리아",
       "lotteria"
     ]
   },
   {
-    "domain": "kfc.co.kr",
+    "domain": "kfc.com",
     "aliases": [
       "kfc",
       "케이에프씨"
@@ -293,7 +293,7 @@
     ]
   },
   {
-    "domain": "dominos.co.kr",
+    "domain": "dominos.com",
     "aliases": [
       "도미노피자",
       "도미노",
@@ -301,7 +301,7 @@
     ]
   },
   {
-    "domain": "pizzahut.co.kr",
+    "domain": "pizzahut.com",
     "aliases": [
       "피자헛",
       "pizzahut"
@@ -343,14 +343,14 @@
     ]
   },
   {
-    "domain": "dyson.co.kr",
+    "domain": "dyson.com",
     "aliases": [
       "다이슨",
       "dyson"
     ]
   },
   {
-    "domain": "sony.co.kr",
+    "domain": "sony.com",
     "aliases": [
       "소니",
       "sony"
@@ -399,7 +399,7 @@
     ]
   },
   {
-    "domain": "roborock.co.kr",
+    "domain": "roborock.com",
     "aliases": [
       "로보락",
       "roborock"
@@ -412,13 +412,6 @@
       "mi",
       "Xiaomi",
       "미지아"
-    ]
-  },
-  {
-    "domain": "nintendo.co.kr",
-    "aliases": [
-      "닌텐도",
-      "nintendo"
     ]
   },
   {
@@ -515,7 +508,7 @@
     ]
   },
   {
-    "domain": "gs25.gsretails.com",
+    "domain": "gs25.com.vn",
     "aliases": [
       "gs25",
       "지에스25",
@@ -539,7 +532,7 @@
     ]
   },
   {
-    "domain": "7-eleven.co.kr",
+    "domain": "7-eleven.com",
     "aliases": [
       "세븐일레븐",
       "7eleven",
@@ -547,7 +540,7 @@
     ]
   },
   {
-    "domain": "oliveyoung.co.kr",
+    "domain": "oliveyoung.tech",
     "aliases": [
       "올리브영",
       "올영",
@@ -569,7 +562,8 @@
       "애플TV플러스",
       "애플티비플러스",
       "Apple TV+",
-      "애플TV"
+      "애플TV",
+      "애플티비"
     ]
   },
   {
@@ -1123,7 +1117,9 @@
     "domain": "nintendo.com",
     "aliases": [
       "닌텐도 온라인",
-      "Nintendo Switch Online"
+      "Nintendo Switch Online",
+      "닌텐도",
+      "nintendo"
     ]
   },
   {
@@ -1213,7 +1209,7 @@
     ]
   },
   {
-    "domain": "dunkindonuts.co.kr",
+    "domain": "dunkin.com",
     "aliases": [
       "던킨",
       "던킨도너츠",
@@ -1270,7 +1266,7 @@
     ]
   },
   {
-    "domain": "coffeebean.co.kr",
+    "domain": "coffeebean.com",
     "aliases": [
       "커피빈",
       "커피빈코리아",
@@ -1316,7 +1312,7 @@
     ]
   },
   {
-    "domain": "jambajuice.co.kr",
+    "domain": "jambajuice.com",
     "aliases": [
       "잠바주스",
       "잠바쥬스",
@@ -1332,14 +1328,14 @@
     ]
   },
   {
-    "domain": "papajohns.co.kr",
+    "domain": "papajohns.com",
     "aliases": [
       "파파존스",
       "Papa Johns"
     ]
   },
   {
-    "domain": "outback.co.kr",
+    "domain": "outback.com",
     "aliases": [
       "아웃백",
       "아웃백스테이크하우스",
@@ -1428,7 +1424,7 @@
     ]
   },
   {
-    "domain": "krispykreme.co.kr",
+    "domain": "krispykreme.com",
     "aliases": [
       "크리스피크림도넛",
       "크리스피크림",
@@ -1818,7 +1814,7 @@
     ]
   },
   {
-    "domain": "costco.co.kr",
+    "domain": "costco.com",
     "aliases": [
       "코스트코",
       "코스트코 코리아",
@@ -2039,4 +2035,3 @@
     ]
   }
 ]
-

@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
     "d3-force": "^3.0.0",
+    "emoji-picker-react": "^5.1.4",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

@@ -271,7 +271,7 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
                         <button key={event.key} type="button" className="upcoming-row" onClick={() => navigate(`/items/${event.itemId}`)}>
                           <span className="upcoming-date"><b>{event.date.slice(5).replace("-", ".")}</b><small>{event.kind === "payment" ? "결제" : "만료"}</small></span>
                           <span className="upcoming-identity">
-                            <BrandIcon name={event.name} domain={event.brandDomain} logoUrl={event.brandLogoUrl} />
+                            <BrandIcon name={event.brandIconName || event.name} domain={event.brandDomain} logoUrl={event.brandLogoUrl} emoji={event.brandIconEmoji} tone={event.brandIconTone} />
                             <span className="upcoming-name"><b>{event.name}</b><small>{eventSubtitle(event)}</small></span>
                           </span>
                           <span className={`upcoming-payment${amount === null ? " no-amount" : ""}`}>

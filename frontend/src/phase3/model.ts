@@ -27,6 +27,7 @@ export type ManagedItem = {
   brand_name: string | null;
   brand_domain: string | null;
   brand_logo_url: string | null;
+  brand_icon_emoji: string | null;
   plan_name: string | null;
   provider_name: string | null;
   amount: number | null;
@@ -68,6 +69,15 @@ export type ManagedItemDraft = Omit<
 export type ManagedItemPayload = ManagedItemDraft & {
   user_id: string;
 };
+
+const USAGE_BRAND_TYPES = new Set<ManagementType>(["gifticon", "coupon", "voucher", "points"]);
+
+export function brandIconName(item: Pick<ManagedItem, "management_type" | "service_name" | "provider_name">) {
+  if (USAGE_BRAND_TYPES.has(item.management_type) && item.provider_name?.trim()) {
+    return item.provider_name.trim();
+  }
+  return item.service_name;
+}
 
 export const TYPE_OPTIONS: Array<{
   value: ManagementType;
@@ -142,6 +152,7 @@ export function createEmptyDraft(
     brand_name: null,
     brand_domain: null,
     brand_logo_url: null,
+    brand_icon_emoji: null,
     plan_name: "",
     provider_name: "",
     amount: null,
@@ -423,6 +434,7 @@ export function buildManagedItemPayload(
     brand_name: draft.brand_name?.trim() || null,
     brand_domain: draft.brand_domain?.trim() || null,
     brand_logo_url: draft.brand_logo_url?.trim() || null,
+    brand_icon_emoji: draft.brand_icon_emoji?.trim() || null,
     currency: draft.amount === null ? null : draft.currency,
     unit_name: draft.unit_name?.trim() || null,
     conditions: draft.conditions?.trim() || null,

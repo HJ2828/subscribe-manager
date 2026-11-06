@@ -170,18 +170,34 @@
 
 .form-card-heading h2 { margin: 0; }
 .form-card-description { margin: -8px 0 0; color: var(--muted); font-size: 13px; }
-.brand-picker { display: grid; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.brand-picker { display: grid; gap: 12px; margin-top: 20px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: #fbfbfd; }
+.brand-form-card { position: relative; z-index: 10; }
 .brand-picker-heading, .brand-picker-row, .brand-picker-meta { display: flex; align-items: center; gap: 10px; }
-.brand-picker-heading { justify-content: space-between; }
+.brand-picker-heading { display: grid; gap: 4px; align-items: start; }
 .brand-picker-heading small, .brand-picker-meta { color: var(--muted); font-size: 12px; }
-.brand-picker-row input { flex: 1; min-width: 0; }
+.brand-picker-row { position: relative; z-index: 20; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.brand-picker-preview { position: relative; z-index: 30; flex: 0 0 auto; }
+.brand-picker-icon-button { display: grid; place-items: center; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
+.brand-picker-icon-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.brand-picker-row input { flex: 1; min-width: 0; min-height: 40px; border: 0; box-shadow: none; background: transparent; }
+.brand-picker-row input:focus { outline: 0; box-shadow: none; }
+.brand-picker-row .button { flex: 0 0 auto; min-height: 40px; padding-inline: 16px; }
 .brand-picker-meta button { border: 0; color: var(--primary); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
+.emoji-picker-popover { position: absolute; z-index: 1000; top: calc(100% + 8px); left: 0; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 12px 28px rgb(35 31 72 / 14%); overflow: hidden; }
+.emoji-picker-popover .EmojiPickerReact { --epr-bg-color: #fff; --epr-category-label-bg-color: #fff; --epr-search-input-bg-color: #fff; --epr-hover-bg-color: #f0efff; --epr-picker-border-color: var(--line); }
 .brand-candidates { display: grid; gap: 6px; }
 .brand-candidates button { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: #fff; text-align: left; cursor: pointer; }
 .brand-candidates button > span:last-child { display: grid; gap: 2px; }
 .brand-candidates small { color: var(--muted); }
 .brand-icon { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; overflow: hidden; border-radius: 10px; color: #393653; background: #f0f1f5; font-style: normal; font-weight: 800; }
 .brand-icon img { width: 100%; height: 100%; object-fit: contain; }
+.brand-icon-emoji { font-size: 22px; line-height: 1; }
+.brand-icon.brand-icon-fallback-subscription { color: #51449a !important; background: #eeeaff !important; }
+.brand-icon.brand-icon-fallback-benefit { color: #9b5a2a !important; background: #fff0e5 !important; }
+.brand-icon.brand-icon-fallback-points { color: #21734c !important; background: #e5f7ed !important; }
+.brand-icon.brand-icon-fallback-warranty { color: #28708c !important; background: #e4f4f8 !important; }
+.brand-icon.brand-icon-fallback-payment { color: #936c14 !important; background: #fff5d7 !important; }
+.brand-icon.brand-icon-fallback-deadline { color: #9a456e !important; background: #fbe8f1 !important; }
 .form-grid .field-wide { grid-column: 1 / -1; }
 .subscription-mode-picker {
   display: grid;

@@ -8,15 +8,26 @@ import {
   type Simulation,
   type SimulationNodeDatum,
 } from "d3-force";
-import { BrandIcon } from "../brand/brand";
+import { BrandIcon, type BrandIconTone } from "../brand/brand";
 
 export interface BubbleChartItem {
   id: string;
   name: string;
+  iconName?: string | null;
+  iconTone?: BrandIconTone;
   value: number;
   valueText: string;
   logoUrl?: string | null;
   brandDomain?: string | null;
+  iconEmoji?: string | null;
+}
+
+const BUBBLE_TONES = ["lavender", "mint", "lemon", "peach", "sky", "rose", "lilac", "aqua"] as const;
+
+function bubbleTone(id: string) {
+  let hash = 0;
+  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return BUBBLE_TONES[hash % BUBBLE_TONES.length];
 }
 
 interface BubbleNode extends SimulationNodeDatum, BubbleChartItem {
@@ -257,7 +268,7 @@ export function BubbleForceChart({
             type="button"
             key={item.id}
             ref={(element) => { if (element) elementsRef.current.set(item.id, element); else elementsRef.current.delete(item.id); }}
-            className={selectedId === item.id ? "selected" : ""}
+            className={`${selectedId === item.id ? "selected " : ""}bubble-tone-${bubbleTone(item.id)}`}
             aria-label={`${item.name} · ${item.valueText}`}
             aria-pressed={selectedId === item.id}
             title={`${item.name} · ${item.valueText}`}
@@ -267,7 +278,7 @@ export function BubbleForceChart({
             onPointerCancel={(event) => finishDrag(event, true)}
             onClick={(event) => { if (event.detail === 0) onSelect(item.id); }}
           >
-            <BrandIcon name={item.name} domain={item.brandDomain} logoUrl={item.logoUrl} />
+            <BrandIcon name={item.iconName || item.name} domain={item.brandDomain} logoUrl={item.logoUrl} emoji={item.iconEmoji} tone={item.iconTone} />
             <span aria-hidden="true" className="bubble-short-name">{shortName}</span>
           </button>
         );

@@ -8,7 +8,7 @@ import {
 
 import { useAuth } from "../auth/AuthContext";
 import { searchBrands } from "../lib/api";
-import { BrandIcon, matchLocalBrands, type BrandCandidate } from "../brand/brand";
+import { BrandIcon, brandIconTone, matchLocalBrands, type BrandCandidate } from "../brand/brand";
 import {
   analyzeImage,
   changeImageLifecycle,
@@ -39,6 +39,7 @@ import {
   CATEGORY_OPTIONS,
   TYPE_OPTIONS,
   buildManagedItemPayload,
+  brandIconName,
   canMarkUsed,
   createEmptyDraft,
   dateInputType,
@@ -59,6 +60,7 @@ import {
   type ManagementType,
   type SupportScope,
 } from "./model";
+import EmojiPicker from "emoji-picker-react";
 import "./phase3.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -72,6 +74,13 @@ type ItemImage = {
   created_at: string;
   signed_url: string | null;
 };
+
+function saveErrorMessage(error: unknown) {
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return "저장하지 못했어요. 입력값과 연결 상태를 확인해 주세요.";
+}
 
 function navigate(path: string, replace = false) {
   window.history[replace ? "replaceState" : "pushState"](null, "", path);
@@ -509,7 +518,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
                 >
                   <span className="item-row-dday-cell"><ItemDdayBadge item={item} /></span>
                   <span className="item-row-name">
-                    <BrandIcon name={item.service_name} domain={item.brand_domain} logoUrl={item.brand_logo_url} className="item-row-icon" />
+                    <BrandIcon name={brandIconName(item)} domain={item.brand_domain} logoUrl={item.brand_logo_url} emoji={item.brand_icon_emoji} tone={brandIconTone(item.management_type)} className="item-row-icon" />
                     <span className="item-row-copy">
                       <span className="item-row-title"><strong>{item.service_name || "이름 확인 필요"}</strong>{imageItemIds.has(item.id) ? <i className="item-image-dot" aria-label="이미지 저장됨" /> : null}</span>
                       <small>{typeLabel(item.management_type, true)} · {item.category || "카테고리 미정"}</small>
@@ -1066,6 +1075,7 @@ export function ManagedItemFormFields({
   const [brandCandidates, setBrandCandidates] = useState<BrandCandidate[]>([]);
   const [brandQuery, setBrandQuery] = useState(draft.brand_name || draft.service_name);
   const [brandBusy, setBrandBusy] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const imageFilled = (key: keyof ManagedItemDraft) =>
     imageFilledFields.has(key);
   const [subscriptionMode, setSubscriptionMode] = useState<SubscriptionMode>(
@@ -1134,11 +1144,32 @@ export function ManagedItemFormFields({
     return () => window.clearTimeout(timer);
   }, [draft.service_name, draft.provider_name, draft.plan_name, draft.conditions, accessToken]);
   async function searchManualBrand() {
-    if (!accessToken || !brandQuery.trim()) return;
+    const query = brandQuery.trim();
+    if (!query) return;
+    if (draft.brand_icon_emoji) update("brand_icon_emoji", null);
+    const local = matchLocalBrands([query]);
+    if (local.length === 1) {
+      chooseBrand(local[0]);
+      return;
+    }
+    if (local.length > 1) {
+      setBrandCandidates(local);
+      return;
+    }
+    const directDomain = query
+      .replace(/^https?:\/\//iu, "")
+      .split(/[/?#]/u, 1)[0]
+      .toLocaleLowerCase("en-US");
+    if (/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/iu.test(directDomain)) {
+      chooseBrand({ domain: directDomain, name: directDomain, logo_url: null });
+      return;
+    }
+    if (!accessToken) return;
     setBrandBusy(true);
     try {
-      const result = await searchBrands(accessToken, brandQuery.trim());
-      setBrandCandidates(result.candidates);
+      const result = await searchBrands(accessToken, query);
+      if (result.candidates.length === 1) chooseBrand(result.candidates[0]);
+      else setBrandCandidates(result.candidates);
     } finally {
       setBrandBusy(false);
     }
@@ -1150,6 +1181,16 @@ export function ManagedItemFormFields({
     setBrandQuery(candidate.name || candidate.domain);
     setBrandCandidates([]);
   }
+  function clearSelectedIcon() {
+    update("brand_name", null);
+    update("brand_domain", null);
+    update("brand_logo_url", null);
+    update("brand_icon_emoji", null);
+    setBrandQuery("");
+    setBrandCandidates([]);
+    setEmojiPickerOpen(false);
+  }
+  const hasSelectedIcon = Boolean(draft.brand_name || draft.brand_domain || draft.brand_logo_url || draft.brand_icon_emoji);
   return (
     <>
       <div className="form-card">
@@ -1175,7 +1216,7 @@ export function ManagedItemFormFields({
         </Field>
         {typeHelp ? <small className="detail-muted">{typeHelp}</small> : null}
       </div>
-      <div className="form-card">
+      <div className="form-card brand-form-card">
         <div className="form-card-heading">
           <h2>{subscriptionType ? "구독·멤버십 정보" : benefitType ? "쿠폰·교환권 정보" : `${typeLabel(draft.management_type, true)} 정보`}</h2>
           <HelpPopover label="정보 입력 안내">
@@ -1262,13 +1303,18 @@ export function ManagedItemFormFields({
           benefitMode={benefitMode}
         />
         <div className="brand-picker">
-          <div className="brand-picker-heading"><strong>브랜드 아이콘</strong><small>입력값과 별칭을 기준으로 자동 연결돼요. 원래 이름은 그대로 저장됩니다.</small></div>
+          <div className="brand-picker-heading"><strong>아이콘 변경</strong><small>입력값과 별칭을 기준으로 자동 연결돼요. 원래 이름은 그대로 저장됩니다.</small></div>
           <div className="brand-picker-row">
-            <BrandIcon name={draft.service_name} domain={draft.brand_domain} logoUrl={draft.brand_logo_url} />
-            <input aria-label="브랜드 검색" value={brandQuery} onChange={(event) => setBrandQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchManualBrand(); } }} placeholder="브랜드명 또는 도메인" />
+            <div className="brand-picker-preview">
+              <button type="button" className="brand-picker-icon-button" onClick={() => setEmojiPickerOpen((open) => !open)} aria-label="브랜드 아이콘 또는 이모지 변경" aria-expanded={emojiPickerOpen}>
+                <BrandIcon name={brandIconName(draft)} domain={draft.brand_domain} logoUrl={draft.brand_logo_url} emoji={draft.brand_icon_emoji} tone={brandIconTone(draft.management_type)} />
+              </button>
+              {emojiPickerOpen ? <div className="emoji-picker-popover"><EmojiPicker onEmojiClick={(emojiData) => { update("brand_icon_emoji", emojiData.emoji); setBrandQuery(""); setEmojiPickerOpen(false); }} width="min(352px, calc(100vw - 48px))" height={420} searchPlaceholder="이모지 검색" previewConfig={{ showPreview: false }} /></div> : null}
+            </div>
+            <input aria-label="브랜드 검색" value={brandQuery} onChange={(event) => { setBrandQuery(event.target.value); if (event.target.value.trim()) update("brand_icon_emoji", null); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchManualBrand(); } }} placeholder="브랜드명 또는 도메인" />
             <button type="button" className="button secondary" onClick={() => void searchManualBrand()} disabled={brandBusy}>{brandBusy ? "검색 중" : "검색"}</button>
           </div>
-          {draft.brand_domain ? <small className="brand-picker-meta">연결됨 · {draft.brand_name || draft.brand_domain} · {draft.brand_domain} <button type="button" onClick={() => { update("brand_name", null); update("brand_domain", null); update("brand_logo_url", null); setBrandCandidates([]); }}>기본 아이콘 사용</button></small> : <small className="brand-picker-meta">매칭되지 않아도 첫 글자 기본 아이콘으로 저장할 수 있어요.</small>}
+          {hasSelectedIcon ? <small className="brand-picker-meta">{draft.brand_icon_emoji ? `이모지 선택됨 · ${draft.brand_icon_emoji}` : `연결됨 · ${draft.brand_name || draft.brand_domain}`} <button type="button" onClick={clearSelectedIcon}>아이콘 제거</button></small> : <small className="brand-picker-meta">매칭되지 않아도 첫 글자 기본 아이콘으로 저장할 수 있어요.</small>}
           {brandCandidates.length ? <div className="brand-candidates" role="listbox" aria-label="브랜드 후보">{brandCandidates.map((candidate) => <button type="button" key={candidate.domain} onClick={() => chooseBrand(candidate)}><BrandIcon name={candidate.name || candidate.domain} domain={candidate.domain} logoUrl={candidate.logo_url} /><span><b>{candidate.name || candidate.domain}</b><small>{candidate.domain}</small></span></button>)}</div> : null}
         </div>
       </div>
@@ -1671,10 +1717,7 @@ export function Phase3FormPage({
     } catch (error) {
       setNotice({
         tone: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "저장하지 못했어요. 입력값과 연결 상태를 확인해 주세요.",
+        text: saveErrorMessage(error),
       });
     } finally {
       setBusy(false);

@@ -1,4 +1,5 @@
-import { isPaymentScheduleType, type ManagedItem, type ManagementType } from "../phase3/model";
+import { brandIconName, isPaymentScheduleType, type ManagedItem, type ManagementType } from "../phase3/model";
+import { brandIconTone, type BrandIconTone } from "../brand/brand";
 
 export type HomeEventKind = "payment" | "benefit";
 
@@ -11,6 +12,9 @@ export type HomeScheduleEvent = {
   brandName?: string | null;
   brandDomain?: string | null;
   brandLogoUrl?: string | null;
+  brandIconName?: string | null;
+  brandIconTone?: BrandIconTone;
+  brandIconEmoji?: string | null;
   managementType: ManagementType;
   providerName: string | null;
   planName: string | null;
@@ -110,6 +114,9 @@ export function buildHomeSchedule(
           brandName: item.brand_name,
           brandDomain: item.brand_domain,
           brandLogoUrl: item.brand_logo_url,
+          brandIconEmoji: item.brand_icon_emoji,
+          brandIconName: brandIconName(item),
+          brandIconTone: brandIconTone(item.management_type),
           managementType: item.management_type,
           providerName: item.provider_name,
           planName: item.plan_name,
@@ -137,6 +144,9 @@ export function buildHomeSchedule(
         brandName: item.brand_name,
         brandDomain: item.brand_domain,
         brandLogoUrl: item.brand_logo_url,
+        brandIconEmoji: item.brand_icon_emoji,
+        brandIconName: brandIconName(item),
+        brandIconTone: brandIconTone(item.management_type),
         managementType: item.management_type,
         providerName: item.provider_name,
         planName: item.plan_name,

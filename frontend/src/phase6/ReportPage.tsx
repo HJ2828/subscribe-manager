@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { todayInTimeZone } from "../home/homeModel";
 import { syncRecurringItemDates } from "../lib/recurringItems";
-import { isPaymentScheduleType, type ManagedItem } from "../phase3/model";
+import { brandIconName, isPaymentScheduleType, type ManagedItem } from "../phase3/model";
 import { PageHeader } from "../components/ui";
 import { buildCalendarEvents } from "../phase5/calendarModel";
 import {
@@ -20,6 +20,7 @@ import {
   type SubscriptionRelationship,
 } from "./reportModel";
 import { BubbleForceChart, type BubbleChartItem } from "./BubbleForceChart";
+import { brandIconTone } from "../brand/brand";
 import "./phase6.css";
 import "./phase6-extra.css";
 
@@ -31,6 +32,16 @@ function formatMoneyValue(value: number, currency: string) {
 function addDays(value: string, days: number) {
   const date = new Date(`${value}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function addMonths(value: string, months: number) {
+  const date = new Date(`${value}T00:00:00Z`);
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, lastDay));
   return date.toISOString().slice(0, 10);
 }
 
@@ -54,8 +65,8 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
   const [timezone, setTimezone] = useState("Asia/Seoul");
   const [defaultCurrency, setDefaultCurrency] = useState("KRW");
   const [reportCurrency, setReportCurrency] = useState("KRW");
-  const [start, setStart] = useState(`${initialToday.slice(0, 7)}-01`);
-  const [end, setEnd] = useState(addDays(initialToday, 365));
+  const [start, setStart] = useState(addMonths(initialToday, -6));
+  const [end, setEnd] = useState(addMonths(initialToday, 6));
   const currency = reportCurrency;
   const money = (value: number, code: string) => {
     const formatted = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(value);
@@ -200,8 +211,11 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
       return {
         id: row.item.id,
         name: row.item.service_name,
+        iconName: brandIconName(row.item),
+        iconTone: brandIconTone(row.item.management_type),
         logoUrl: row.item.brand_logo_url,
         brandDomain: row.item.brand_domain,
+        iconEmoji: row.item.brand_icon_emoji,
         value,
         valueText: metric === "months" ? `${value.toFixed(1)}개월` : money(value, currency),
       };
@@ -356,7 +370,7 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
             <div className="view-tabs" role="tablist">{(["bubble", "chart", "table"] as const).map((mode) => <button type="button" role="tab" aria-selected={view === mode} className={view === mode ? "active" : ""} key={mode} onClick={() => setView(mode)}>{mode === "bubble" ? "버블 차트" : mode === "chart" ? "그래프" : "표"}</button>)}</div>
             {view === "bubble" ? <BubbleForceChart items={bubbleItems} selectedId={selectedId} onSelect={(id) => setSelectedId((current) => current === id ? "" : id)} /> : view === "chart" ? <div className="bar-chart">{knownRows.map((row) => { const value = metricValue(row, metric) || 0; return <button type="button" key={row.item.id} onClick={() => setSelectedId(row.item.id)}><span>{row.item.service_name}</span><i style={{ width: `${Math.max(3, value / maximum * 100)}%` }} /><strong>{metric === "months" ? `${value.toFixed(1)}개월` : money(value, currency)}</strong></button>; })}</div> : <div className="report-table-wrap"><table><thead><tr><th>서비스</th><th>관계</th><th>값</th></tr></thead><tbody>{knownRows.map((row) => <tr key={row.item.id} tabIndex={0} onClick={() => setSelectedId(row.item.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedId(row.item.id); } }}><td>{row.item.service_name}</td><td>{row.relationship ? relationLabel(row.relationship.relationship_type) : "직접 결제"}</td><td>{metric === "months" ? `${(metricValue(row, metric) || 0).toFixed(1)}개월` : money(metricValue(row, metric) || 0, currency)}</td></tr>)}</tbody></table></div>}
             {unknownRows.length ? <div className="unknown-group"><b>비용 비교 제외·미확인</b><span>{unknownRows.map((row) => row.item.service_name).join(" · ")}</span><small>{metric === "accumulated" ? "비용이 상위 구독에 귀속됐거나 Phase 6 도입 이후 기록된 가격 구간이 부족해요." : "비용이 다른 항목에 귀속됐거나 금액·주기·시작일을 확인할 수 없어요."}</small></div> : null}
-            {selected ? <aside className="visual-detail"><h3>{selected.item.service_name}</h3><p>{selected.item.plan_name || "요금제 미입력"} · {selected.relationship ? relationLabel(selected.relationship.relationship_type) : "직접 결제"}</p><dl><div><dt>다음 결제일</dt><dd>{selected.item.target_date_value || "확인 필요"}</dd></div><div><dt>월 환산액</dt><dd>{selected.monthlyEquivalent === null ? "계산할 정보 없음" : money(selected.monthlyEquivalent, currency)}</dd></div><div><dt>추정 누적액</dt><dd>{selected.estimatedAccumulated === null ? "계산할 정보 없음" : money(selected.estimatedAccumulated, currency)}</dd></div><div><dt>구독 기간</dt><dd>{selected.subscribedMonths === null ? "확인 필요" : `${selected.subscribedMonths.toFixed(1)}개월`}</dd></div></dl><small>누적액은 기록된 가격 구간에 월 30.4375일·연 365.2425일을 적용한 참고값입니다.</small><div className="status-history"><b>이용 상태 이력</b>{statusHistory.filter((history) => history.item_id === selected.item.id).slice(0, 5).map((history) => <span key={history.id}>{history.occurred_on} · {history.event_type === "tracking_started" ? "이력 기록 시작" : history.event_type === "paused" ? "일시 중지" : history.event_type === "ended" ? "이용 종료" : history.event_type === "resumed" ? "재이용" : "상태 변경"}</span>)}{statusHistory.every((history) => history.item_id !== selected.item.id) ? <span>기록된 이력이 없어요.</span> : null}</div></aside> : <p className="report-empty">표시할 구독이 없어요.</p>}
+            {selected ? <aside className="visual-detail"><h3>{selected.item.service_name}</h3><p>{selected.item.plan_name || "요금제 미입력"} · {selected.relationship ? relationLabel(selected.relationship.relationship_type) : "직접 결제"}</p><dl><div><dt>다음 결제일</dt><dd>{selected.item.target_date_value || "확인 필요"}</dd></div><div><dt>월 환산액</dt><dd>{selected.monthlyEquivalent === null ? "계산할 정보 없음" : money(selected.monthlyEquivalent, currency)}</dd></div><div><dt>추정 누적액</dt><dd>{selected.estimatedAccumulated === null ? "계산할 정보 없음" : money(selected.estimatedAccumulated, currency)}</dd></div><div><dt>구독 기간</dt><dd>{selected.subscribedMonths === null ? "확인 필요" : `${selected.subscribedMonths.toFixed(1)}개월`}</dd></div></dl><small>누적액은 기록된 가격 구간에 월 30.4375일·연 365.2425일을 적용한 참고값입니다.</small><div className="status-history"><b>이용 상태 이력</b>{statusHistory.filter((history) => history.item_id === selected.item.id).slice(0, 5).map((history) => <span key={history.id}>{history.occurred_on} · {history.event_type === "tracking_started" ? "이력 기록 시작" : history.event_type === "paused" ? "일시 중지" : history.event_type === "ended" ? "이용 종료" : history.event_type === "resumed" ? "재이용" : "상태 변경"}</span>)}{statusHistory.every((history) => history.item_id !== selected.item.id) ? <span>기록된 이력이 없어요.</span> : null}</div></aside> : <p className="report-empty report-overview-empty">표시할 구독이 없어요.</p>}
           </article>
         </section>
       </main>
