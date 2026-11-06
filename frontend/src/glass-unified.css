@@ -48,7 +48,6 @@
 .google-calendar-card,
 .account-card,
 .deletion-card,
-.home-announcements,
 .ott-editorial-section,
 .selected-date-panel,
 .visual-detail,
@@ -267,7 +266,6 @@
 .account-card,
 .deletion-card { padding: var(--glass-card-padding); }
 
-.home-announcements,
 .ott-editorial-section,
 .visual-detail,
 .unknown-group,
@@ -284,7 +282,7 @@
 .filter-card, .calendar-toolbar, .report-controls, .scrap-filters { padding: 20px; }
 .items-card, .upcoming-card, .service-news-group { padding: 0; }
 .items-card-heading, .upcoming-card > .home-card-header, .service-news-group > header { background: var(--glass-card-bg); }
-.home-announcements, .ott-editorial-section, .service-news-group > header { border-color: var(--glass-card-border); background: var(--glass-card-bg); box-shadow: none; backdrop-filter: blur(14px); }
+.ott-editorial-section, .service-news-group > header { border-color: var(--glass-card-border); background: var(--glass-card-bg); box-shadow: none; backdrop-filter: blur(14px); }
 .items-card-heading { padding: 20px 24px; }
 .items-table-head { background: rgb(255 255 255 / 58%); }
 .item-row, .upcoming-row, .news-row, .calendar-list-row { background: rgb(255 255 255 / 54%); }
@@ -313,6 +311,23 @@
 .empty-state, .phase5-state, .phase8-empty, .report-empty, .home-empty { padding: 24px; }
 .home-empty { background: rgb(255 255 255 / 66%); }
 .phase5-state, .phase8-empty { min-height: 160px; display: grid; place-items: center; }
+
+/* Settings uses the same translucent surface language for nested controls. */
+.settings-page .settings-subsection,
+.settings-page .info-panel,
+.settings-page .choice-chip,
+.settings-page .readonly-value,
+.settings-page .button.secondary {
+  border-color: var(--glass-card-border);
+  background: rgb(255 255 255 / 62%);
+  box-shadow: 0 4px 14px rgb(61 91 137 / 5%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.settings-page .settings-subsection { padding: 20px; border-radius: 14px; }
+.settings-page .field input,
+.settings-page .field select { background: rgb(255 255 255 / 72%); }
+.settings-page .choice-chip[aria-pressed="true"] { background: rgb(237 233 255 / 76%); }
 .empty-state, .phase5-state:not(.error), .phase8-empty, .report-empty, .home-empty { background-image: url("./assets/brand/ailen_remove_bg.png"); background-position: right 18px bottom 12px; background-repeat: no-repeat; background-size: 72px; padding-right: 96px; }
 .empty-state.detail-image-empty { padding: 100px 24px 24px; background-position: center 16px; background-size: 72px; text-align: center; }
 .completion-content::after { content: ""; display: block; width: 112px; height: 112px; margin: 40px auto 0; background: url("./assets/brand/moon_remove_bg.png") center / contain no-repeat; }
@@ -389,7 +404,7 @@ body.sidebar-collapsed .sidebar-open-button { display: inline-grid; }
 .items-hide-expired { display: inline-flex; align-items: center; gap: 7px; color: #667085; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; }
 .items-hide-expired input { width: 16px; height: 16px; margin: 0; accent-color: #002d80; }
 .items-image-legend { display: inline-flex; align-items: center; gap: 6px; color: #7a8494; font-size: 11px; white-space: nowrap; }
-.items-image-legend i, .item-image-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #6a3ea3; }
+.items-image-legend i, .items-image-filter i, .item-image-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #6a3ea3; }
 .items-table-head, .item-row { grid-template-columns: 88px minmax(190px, 1.35fr) minmax(130px, .75fr) minmax(120px, .65fr) 100px 30px; }
 .item-row-icon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 12px; color: var(--primary); background: var(--primary-soft); font-size: 14px; font-style: normal; font-weight: 800; }
 .item-row-dday-cell { display: flex; align-items: center; justify-content: flex-start; min-width: 0; margin-left: 0; padding-left: 0; }

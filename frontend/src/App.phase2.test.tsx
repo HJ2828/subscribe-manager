@@ -64,7 +64,6 @@ describe("Phase 2 account screens", () => {
 
   it.each([
     ["/signup", "회원가입"],
-    ["/verify-email", "이메일을 확인해 주세요"],
     ["/forgot-password", "비밀번호 재설정"],
     ["/reset-password", "재설정 링크가 만료되었어요"],
   ])("renders the public Phase 2 screen at %s", (path, heading) => {

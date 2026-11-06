@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
-import { getAnnouncements, getCollectionStatus, getRelevantNews, type CollectionStatus, type OperatorAnnouncement, type ServiceNews } from "../lib/api";
+import { getCollectionStatus, getRelevantNews, type CollectionStatus, type ServiceNews } from "../lib/api";
 import { syncRecurringItemDates } from "../lib/recurringItems";
 import { displayDate, typeLabel, type ManagedItem } from "../phase3/model";
 import { BrandIcon } from "../brand/brand";
@@ -135,7 +135,6 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
   const [selectedDate, setSelectedDate] = useState("");
   const [news, setNews] = useState<ServiceNews[]>([]);
   const [newsState, setNewsState] = useState<"loading" | "ready" | "error">("loading");
-  const [announcements, setAnnouncements] = useState<OperatorAnnouncement[]>([]);
   const [collectionStatus, setCollectionStatus] = useState<CollectionStatus | null>(null);
 
   useEffect(() => {
@@ -143,11 +142,6 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
     Promise.all([getRelevantNews(session.access_token), getCollectionStatus(session.access_token)])
       .then(([rows, status]) => { const byService = new Map<string, ServiceNews>(); rows.forEach((row) => { const key = row.service_name || row.catalog_id; if (!byService.has(key)) byService.set(key, row); }); setNews([...byService.values()].slice(0, 3)); setCollectionStatus(status); setNewsState("ready"); })
       .catch(() => setNewsState("error"));
-  }, [session]);
-
-  useEffect(() => {
-    if (!session) return;
-    getAnnouncements(session.access_token).then((rows) => setAnnouncements(rows.slice(0, 3))).catch(() => setAnnouncements([]));
   }, [session]);
 
   useEffect(() => {
@@ -211,7 +205,6 @@ export function UnifiedHomePage({ navigation }: { navigation: ReactNode }) {
         <PageHeader eyebrow="오늘의 달리" title={<><span className="home-title-line">달마다 돌아오는</span>{" "}<span className="home-title-line">구독 · 기한 관리</span></>} description="이번 달 구독과 기한을 한눈에 확인하세요." mascot="moon" actions={<div className="home-actions"><Link to="/items/new" className="button primary">＋ 등록</Link><Link to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</Link></div>} />
 
         {error ? <div className="notice error" role="alert">{error}</div> : null}
-        {announcements.length ? <section className="home-announcements" aria-label="운영 공지사항"><h2>공지사항</h2>{announcements.map((entry) => <article key={entry.id}><div><strong>{entry.title}</strong><small>{entry.published_at?.slice(0, 10) || entry.created_at.slice(0, 10)}</small></div><p>{entry.body}</p></article>)}</section> : null}
         {!error ? (
           <>
             <GlassCard as="section" className="home-overview-panel" aria-label="다음 30일 요약">

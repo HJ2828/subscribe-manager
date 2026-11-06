@@ -31,6 +31,7 @@
 .sidebar-nav a.active, .sidebar-notification.active { color: var(--primary); background: #fff; box-shadow: 0 8px 22px rgb(0 45 128 / 9%); }
 .nav-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; }
 .nav-icon img { width: 19px; height: 19px; }
+.settings-nav-icon img { filter: grayscale(1) saturate(0) opacity(.72); }
 .sidebar-nav a.active .nav-icon, .sidebar-notification.active .nav-icon { background: var(--primary-soft); }
 .sidebar-footer { display: grid; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); }
 .sidebar-notification b { min-width: 22px; padding: 2px 6px; border-radius: 999px; color: #fff; background: var(--secondary); font-size: 10px; text-align: center; }
@@ -71,7 +72,7 @@
 .home-news-section { margin-top: 32px; }
 
 .filter-card, .calendar-toolbar, .report-controls, .scrap-filters { padding: 20px; border: 1px solid rgb(255 255 255 / 78%); border-radius: 18px; background: var(--glass-strong); box-shadow: var(--panel-shadow); backdrop-filter: blur(12px); }
-.phase3-filter { display: grid; gap: 16px; margin-bottom: 16px; }
+.phase3-filter { display: grid; gap: 16px; margin-bottom: 16px; padding: 24px; }
 .filter-card-header { display: grid; grid-template-columns: minmax(240px, 1fr) auto; align-items: end; gap: 16px; }
 .filter-card-header .field { max-width: 560px; }
 .filter-reset { min-height: 44px; padding: 8px 12px; border: 0; color: var(--muted); background: transparent; font-weight: 700; cursor: pointer; }

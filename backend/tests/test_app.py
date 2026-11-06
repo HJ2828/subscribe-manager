@@ -6,8 +6,9 @@ from app.account_deletion import DeletionResult, get_account_deletion_service
 from app.config import Settings, get_settings
 from app.errors import ApiError
 from app.google_calendar_service import get_google_calendar_service
-from app.main import app
+from app.main import app, create_app
 from app.security import CurrentUser, require_current_user
+from app.unverified_account_cleanup import CleanupResult, get_unverified_account_cleanup_service
 
 client = TestClient(app)
 
@@ -141,3 +142,33 @@ def test_content_worker_rejects_missing_cron_secret() -> None:
     response = client.post("/api/v1/content/process")
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "invalid_cron_secret"
+
+
+class SuccessfulAccountCleanupService:
+    async def cleanup(self) -> CleanupResult:
+        return CleanupResult(scanned=4, deleted=2, skipped=2)
+
+
+def test_unverified_account_cleanup_rejects_missing_cron_secret() -> None:
+    response = client.post("/api/v1/auth/cleanup-unverified")
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "invalid_cron_secret"
+
+
+def test_unverified_account_cleanup_returns_summary() -> None:
+    configured_app = create_app(Settings(
+        supabase_url="https://project.example",
+        supabase_secret_key="server-only-secret",
+        unverified_account_cleanup_cron_secret="cleanup-secret",
+    ))
+    configured_app.dependency_overrides[get_unverified_account_cleanup_service] = (
+        SuccessfulAccountCleanupService
+    )
+
+    response = TestClient(configured_app).post(
+        "/api/v1/auth/cleanup-unverified",
+        headers={"X-Cron-Secret": "cleanup-secret"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"scanned": 4, "deleted": 2, "skipped": 2}

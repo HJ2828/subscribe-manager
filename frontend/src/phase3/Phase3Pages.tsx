@@ -58,7 +58,6 @@ import {
   type ManagedItem,
   type ManagedItemDraft,
   type ManagementType,
-  type SupportScope,
 } from "./model";
 import EmojiPicker from "emoji-picker-react";
 import "./phase3.css";
@@ -285,17 +284,31 @@ function isDueMatch(item: ManagedItem, filter: string) {
   return true;
 }
 
+const LIST_TYPE_OPTIONS: Array<{ value: string; label: string; types: ManagementType[] }> = [
+  { value: "subscription_membership", label: "구독·멤버십", types: ["recurring_subscription", "fixed_term_membership"] },
+  { value: "coupon_exchange", label: "쿠폰·교환권", types: ["gifticon", "coupon", "voucher"] },
+  { value: "points", label: "포인트", types: ["points"] },
+  { value: "warranty", label: "제품 보증·보장 서비스", types: ["warranty"] },
+  { value: "other_payment_deadline", label: "기타 결제 기한", types: ["other_payment_deadline"] },
+  { value: "other_deadline", label: "기타 기한", types: ["other_deadline"] },
+];
+
+function isListTypeMatch(item: ManagedItem, filter: string) {
+  if (filter === "all") return true;
+  return LIST_TYPE_OPTIONS.find((option) => option.value === filter)?.types.includes(item.management_type) ?? false;
+}
+
 export function Phase3ListPage({ navigation }: PageProps) {
   const { client, session } = useAuth();
   const [items, setItems] = useState<ManagedItem[]>([]);
   const [imageItemIds, setImageItemIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
-  const [type, setType] = useState<"all" | ManagementType>("all");
+  const [type, setType] = useState("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [hidePastDates, setHidePastDates] = useState(true);
-  const [support, setSupport] = useState<"all" | SupportScope>("all");
+  const [showImageSaved, setShowImageSaved] = useState(false);
   const [sort, setSort] = useState("date");
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(() => {
@@ -363,12 +376,12 @@ export function Phase3ListPage({ navigation }: PageProps) {
           return (
             (!query.trim() ||
               searchText.includes(query.trim().toLowerCase())) &&
-            (type === "all" || item.management_type === type) &&
+            isListTypeMatch(item, type) &&
             (category === "all" || item.category === category) &&
             (status === "all" || currentStatus === status) &&
             isDueMatch(item, dateFilter) &&
             (!hidePastDates || !itemHasPastDate(item)) &&
-            (support === "all" || item.support_scope === support)
+            (!showImageSaved || imageItemIds.has(item.id))
           );
         })
         .sort((a, b) => {
@@ -377,7 +390,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
           if (sort === "amount") return (b.amount ?? -1) - (a.amount ?? -1);
           return targetSortValue(a).localeCompare(targetSortValue(b));
         }),
-    [items, query, type, category, status, dateFilter, hidePastDates, support, sort],
+    [items, query, type, category, status, dateFilter, hidePastDates, imageItemIds, showImageSaved, sort],
   );
 
   if (loading) return <PageLoading label="관리 목록을 불러오는 중" />;
@@ -392,7 +405,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
             <Field id="item-search" label="항목 검색">
               <input id="item-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="서비스명, 사용처 또는 카테고리" />
             </Field>
-            <button type="button" className="filter-reset" onClick={() => { setQuery(""); setType("all"); setCategory("all"); setStatus("all"); setDateFilter("all"); setHidePastDates(true); setSupport("all"); setSort("date"); }}>필터 초기화</button>
+            <button type="button" className="filter-reset" onClick={() => { setQuery(""); setType("all"); setCategory("all"); setStatus("all"); setDateFilter("all"); setHidePastDates(true); setShowImageSaved(false); setSort("date"); }}>필터 초기화</button>
           </div>
           <div className="filter-grid">
             <label>
@@ -400,11 +413,11 @@ export function Phase3ListPage({ navigation }: PageProps) {
               <select
                 value={type}
                 onChange={(event) =>
-                  setType(event.target.value as "all" | ManagementType)
+                  setType(event.target.value)
                 }
               >
                 <option value="all">유형 전체</option>
-                {TYPE_OPTIONS.map((option) => (
+                {LIST_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -458,21 +471,6 @@ export function Phase3ListPage({ navigation }: PageProps) {
               </select>
             </label>
             <label>
-              <span>정보 지원</span>
-              <select
-                value={support}
-                onChange={(event) =>
-                  setSupport(event.target.value as "all" | SupportScope)
-                }
-              >
-                <option value="all">지원 범위 전체</option>
-                <option value="none">지원 없음</option>
-                <option value="news">소식 지원</option>
-                <option value="cancellation">해지 안내 지원</option>
-                <option value="both">소식·해지 지원</option>
-              </select>
-            </label>
-            <label>
               <span>정렬</span>
               <select
                 value={sort}
@@ -492,7 +490,7 @@ export function Phase3ListPage({ navigation }: PageProps) {
             </div>
             <div className="items-card-tools">
               <label className="items-hide-expired"><input type="checkbox" checked={hidePastDates} onChange={(event) => setHidePastDates(event.target.checked)} /> 만료 기한 숨기기</label>
-              <small className="items-image-legend"><i aria-hidden="true" /> 이미지 저장한 항목</small>
+              <label className="items-hide-expired items-image-filter"><input type="checkbox" checked={showImageSaved} onChange={(event) => setShowImageSaved(event.target.checked)} /><i aria-hidden="true" /> 이미지 저장한 항목</label>
             </div>
           </div>
           {filtered.length ? (
@@ -650,7 +648,9 @@ function TypeSpecificFields({
   const subscription = draft.management_type === "recurring_subscription" || draft.management_type === "fixed_term_membership";
   const mode = subscriptionMode || (draft.management_type === "fixed_term_membership" ? "term" : "recurring");
   const recurring = subscription && mode === "recurring";
-  const paymentSchedule = subscription && mode === "recurring";
+  const paymentSchedule =
+    isPaymentScheduleType(draft.management_type) &&
+    (draft.management_type === "other_payment_deadline" || mode === "recurring");
   const fixed = subscription && mode === "term";
   const trial = subscription && mode === "trial";
   const consumable = canMarkUsed(draft.management_type);
@@ -850,7 +850,7 @@ function TypeSpecificFields({
           </Field>
         ) : null}
       </div>
-      {subscription || warranty ? (
+      {paymentSchedule || subscription || warranty ? (
         <DateField
           prefix="item-start"
           label={
@@ -2405,7 +2405,7 @@ export function Phase3DetailPage({
     <div className="app-shell items-shell">
       {navigation}
       <main className="detail-page phase3-page">
-        <PageHeader className="detail-page-heading" title={item.service_name || "이름 확인 필요"} description={item.plan_name || item.provider_name || "등록한 핵심 정보와 연결 상태를 확인하세요."} actions={<div className="items-actions">{canMarkUsed(item.management_type) ? item.lifecycle_status === "used" ? <button type="button" className="button usage-cancel-button" onClick={cancelUsed} disabled={completing}>{completing ? "저장 중" : "사용 취소"}</button> : <button type="button" className="button primary" onClick={markUsed} disabled={completing}>{completing ? "저장 중" : "사용 완료"}</button> : null}<Link to={`/items/${item.id}/edit`} className="button secondary">수정</Link><button type="button" className="button secondary danger-text" onClick={() => setDeleteConfirm((value) => !value)} disabled={deleting}>삭제</button></div>} />
+        <PageHeader className="detail-page-heading" title={item.service_name || "이름 확인 필요"} description={typeLabel(item.management_type)} actions={<div className="items-actions">{canMarkUsed(item.management_type) ? item.lifecycle_status === "used" ? <button type="button" className="button usage-cancel-button" onClick={cancelUsed} disabled={completing}>{completing ? "저장 중" : "사용 취소"}</button> : <button type="button" className="button primary" onClick={markUsed} disabled={completing}>{completing ? "저장 중" : "사용 완료"}</button> : null}<Link to={`/items/${item.id}/edit`} className="button secondary">수정</Link><button type="button" className="button secondary danger-text" onClick={() => setDeleteConfirm((value) => !value)} disabled={deleting}>삭제</button></div>} />
         <NoticeBox notice={notice} />
         {deleteConfirm ? (
           <section

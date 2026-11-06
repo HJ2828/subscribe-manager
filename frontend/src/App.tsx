@@ -4,7 +4,8 @@ import ailenMascot from "./assets/brand/ailen_remove_bg.png";
 import moonMascot from "./assets/brand/moon_remove_bg.png";
 import circleCheckIcon from "./assets/figma/circle-check.svg";
 import infoIcon from "./assets/figma/info.svg";
-import mailCheckIcon from "./assets/figma/mail-check.svg";
+import galleryIcon from "./assets/figma/gallery.svg";
+import bookmarkIcon from "./assets/figma/bookmark.svg";
 import navCalendarIcon from "./assets/figma/nav-calendar.svg";
 import navHomeIcon from "./assets/figma/nav-home.svg";
 import navListIcon from "./assets/figma/nav-list.svg";
@@ -17,7 +18,7 @@ import statusAlertIcon from "./assets/figma/status-alert.svg";
 import warningIcon from "./assets/figma/warning.svg";
 import { useAuth } from "./auth/AuthContext";
 import { UnifiedHomePage } from "./home/HomePage";
-import { deleteAccount, getHealth, getOperatorStatus } from "./lib/api";
+import { deleteAccount, getAnnouncements, getHealth, getOperatorStatus, type OperatorAnnouncement } from "./lib/api";
 import { publicConfig } from "./lib/config";
 import {
   Phase3DetailPage,
@@ -169,7 +170,6 @@ function PublicHeader() {
   return (
     <header className="public-header">
       <Logo />
-      <span className="header-context">회원 · 계정</span>
     </header>
   );
 }
@@ -331,18 +331,12 @@ function LoginPage() {
     });
     setBusy(false);
     if (error) {
-      if (/confirm|verified/i.test(error.message)) {
-        sessionStorage.setItem("pending_email", email.trim());
-        go("/verify-email");
-        return;
-      }
       setNotice({
         tone: "error",
         text: "이메일 또는 비밀번호가 맞지 않습니다.",
       });
       return;
     }
-    sessionStorage.removeItem("pending_email");
     setPassword("");
     go("/", true);
   }
@@ -397,10 +391,6 @@ function LoginPage() {
         <AppLink to="/signup">회원가입</AppLink>
         <AppLink to="/forgot-password">비밀번호 찾기</AppLink>
       </div>
-      <div className="divider" />
-      <p className="card-footnote">
-        이메일 확인을 마친 계정만 내 홈과 설정을 이용할 수 있어요.
-      </p>
     </AuthShell>
   );
 }
@@ -436,7 +426,6 @@ function SignupPage() {
     const { data, error } = await client.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     setBusy(false);
     if (error) {
@@ -448,13 +437,15 @@ function SignupPage() {
       });
       return;
     }
-    if (data.session) {
-      go("/", true);
+    if (!data.session) {
+      setNotice({
+        tone: "error",
+        text: "회원가입은 완료됐지만 바로 로그인할 수 없어요. Supabase의 이메일 인증 설정을 꺼 주세요.",
+      });
       return;
     }
-    sessionStorage.setItem("pending_email", email.trim());
     setPassword("");
-    go("/verify-email", true);
+    go("/", true);
   }
 
   return (
@@ -504,100 +495,9 @@ function SignupPage() {
           )}
         </button>
       </form>
-      <InfoPanel title="가입 후 이메일 확인이 필요해요">
-        확인 메일의 링크를 완료한 뒤 로그인해 주세요.
-      </InfoPanel>
       <AppLink to="/login" className="center-link">
         이미 계정이 있나요? 로그인
       </AppLink>
-    </AuthShell>
-  );
-}
-
-function VerifyEmailPage() {
-  const { client, session } = useAuth();
-  const [email] = useState(
-    () =>
-      sessionStorage.getItem("pending_email") ||
-      session?.user.email ||
-      "이메일 확인 필요",
-  );
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<Notice>(null);
-  const [cooldown, setCooldown] = useState(0);
-
-  useEffect(() => {
-    if (!cooldown) return;
-    const timer = window.setInterval(
-      () => setCooldown((value) => Math.max(0, value - 1)),
-      1000,
-    );
-    return () => window.clearInterval(timer);
-  }, [cooldown]);
-
-  async function resend() {
-    if (!client || !/^\S+@\S+\.\S+$/.test(email) || cooldown) return;
-    setBusy(true);
-    setNotice(null);
-    const { error } = await client.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    setBusy(false);
-    if (error) {
-      setNotice({
-        tone: "error",
-        text: /rate/i.test(error.message)
-          ? "잠시 후 다시 요청해 주세요."
-          : "확인 메일을 보내지 못했습니다.",
-      });
-      return;
-    }
-    setCooldown(60);
-    setNotice({ tone: "success", text: "확인 메일을 다시 보냈어요." });
-  }
-
-  return (
-    <AuthShell
-      title="이메일을 확인해 주세요"
-      description="받은 메일의 확인 링크를 따라가 주세요."
-    >
-      <img className="mail-check-icon" src={mailCheckIcon} alt="" />
-      <NoticeBox notice={notice} />
-      <div className="field">
-        <span className="field-label">확인할 이메일</span>
-        <div className="readonly-value">{email}</div>
-      </div>
-      <p className="card-copy">
-        메일함에 확인 메일이 없다면 스팸함을 확인하거나 확인 메일을 다시 요청해
-        주세요.
-      </p>
-      <InfoPanel title="이메일 확인 전에는 이용할 수 없어요">
-        내 홈과 설정은 이메일 확인 완료 후 이용할 수 있어요.
-      </InfoPanel>
-      <div className="action-stack">
-        <button
-          className="button primary full"
-          type="button"
-          onClick={resend}
-          disabled={busy || cooldown > 0}
-        >
-          {busy ? (
-            <>
-              <span className="button-spinner" />
-              발송 중
-            </>
-          ) : cooldown ? (
-            `${cooldown}초 후 다시 보내기`
-          ) : (
-            "확인 메일 재발송"
-          )}
-        </button>
-        <AppLink to="/login" className="center-link">
-          로그인으로 돌아가기
-        </AppLink>
-      </div>
     </AuthShell>
   );
 }
@@ -764,39 +664,6 @@ function ResetPasswordPage() {
   );
 }
 
-function AuthCallbackPage() {
-  const { session, loading } = useAuth();
-  if (loading) return <LoadingScreen label="이메일 확인 중" />;
-  if (!session)
-    return (
-      <AuthShell
-        title="인증 링크를 사용할 수 없어요"
-        description="링크가 만료되었거나 이미 사용된 링크일 수 있어요."
-      >
-        <NoticeBox
-          notice={{ tone: "error", text: "새 확인 메일을 요청해 주세요." }}
-        />
-        <AppLink to="/verify-email" className="button primary full">
-          확인 메일 다시 받기
-        </AppLink>
-      </AuthShell>
-    );
-  sessionStorage.removeItem("pending_email");
-  return (
-    <AuthShell
-      title="이메일 확인을 마쳤어요"
-      description="이제 보호된 화면을 안전하게 이용할 수 있어요."
-    >
-      <NoticeBox
-        notice={{ tone: "success", text: "이메일 확인이 완료됐어요." }}
-      />
-      <button className="button primary full" onClick={() => go("/", true)}>
-        내 홈으로 이동
-      </button>
-    </AuthShell>
-  );
-}
-
 const navItems = [
   ["홈", navHomeIcon, "/"],
   ["전체 목록", navListIcon, "/items"],
@@ -833,7 +700,7 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
           to={path}
           className={active === activeForLabel(label) ? "active" : undefined}
         >
-          <span className="nav-icon"><img src={icon} alt="" /></span>
+          <span className={`nav-icon${label === "설정" ? " settings-nav-icon" : ""}`}><img src={icon} alt="" /></span>
           <span>{label}</span>
         </AppLink>
       ))}
@@ -900,13 +767,9 @@ function Protected({ children }: { children: ReactNode }) {
     if (!session) {
       sessionStorage.setItem("auth_notice", "계속하려면 로그인해 주세요.");
       go("/login", true);
-    } else if (!session.user.email_confirmed_at) {
-      if (session.user.email)
-        sessionStorage.setItem("pending_email", session.user.email);
-      go("/verify-email", true);
     }
   }, [loading, session]);
-  if (loading || !session || !session.user.email_confirmed_at)
+  if (loading || !session)
     return <LoadingScreen label="로그인 정보 확인 중" />;
   return <>{children}</>;
 }
@@ -1902,6 +1765,29 @@ function SubscriptionDetailPage({ itemId }: { itemId: string }) {
   );
 }
 
+function AnnouncementsPage() {
+  const { session } = useAuth();
+  const [rows, setRows] = useState<OperatorAnnouncement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!session) return;
+    getAnnouncements(session.access_token)
+      .then(setRows)
+      .finally(() => setLoading(false));
+  }, [session]);
+
+  return (
+    <div className="app-shell settings-shell">
+      <AppNavigation active="settings" />
+      <main className="settings-page announcements-page">
+        <PageHeader eyebrow="공지사항" title="공지사항" description="서비스 운영과 이용에 필요한 안내를 확인하세요." actions={<span className="page-header-context">전체 사용자</span>} />
+        {loading ? <div className="phase8-empty">공지사항을 불러오는 중…</div> : rows.length ? <section className="announcement-list">{rows.map((row) => <article className="settings-card announcement-card" key={row.id}><div className="announcement-card-heading"><h2>{row.title}</h2><time>{row.published_at?.slice(0, 10) || row.created_at.slice(0, 10)}</time></div><p>{row.body}</p></article>)}</section> : <div className="phase8-empty"><strong>등록된 공지사항이 없습니다.</strong><p>새로운 운영 안내가 등록되면 여기에 표시됩니다.</p></div>}
+      </main>
+    </div>
+  );
+}
+
 function SettingsPage() {
   const { client, session } = useAuth();
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -1990,7 +1876,6 @@ function SettingsPage() {
     setLogoutBusy(true);
     const { error } = await client.auth.signOut();
     if (error) await client.auth.signOut({ scope: "local" });
-    sessionStorage.removeItem("pending_email");
     go("/login", true);
   }
 
@@ -2148,6 +2033,12 @@ function SettingsPage() {
             </button>
           </section>
           <aside className="account-column">
+            <section className="settings-card settings-shortcuts">
+              <h2>바로가기</h2>
+              <AppLink to="/images" className="button secondary full"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</AppLink>
+              <AppLink to="/scraps" className="button secondary full"><img className="button-icon" src={bookmarkIcon} alt="" />스크랩 보관함</AppLink>
+              <AppLink to="/announcements" className="button secondary full"><img className="button-icon" src={notificationIcon} alt="" />공지사항</AppLink>
+            </section>
             {isOperator ? (
               <section className="settings-card">
                 <h2>운영자 도구</h2>
@@ -2317,10 +2208,8 @@ export default function App() {
   if (!publicConfig.isSupabaseConfigured) return <MissingConfig />;
   if (path === "/login") return <LoginPage />;
   if (path === "/signup") return <SignupPage />;
-  if (path === "/verify-email") return <VerifyEmailPage />;
   if (path === "/forgot-password") return <ForgotPasswordPage />;
   if (path === "/reset-password") return <ResetPasswordPage />;
-  if (path === "/auth/callback") return <AuthCallbackPage />;
   if (path === "/account-deleted") return <AccountDeletedPage />;
   if (path === "/images/new")
     return (
@@ -2404,6 +2293,12 @@ export default function App() {
     return (
       <Protected>
         <SettingsPage />
+      </Protected>
+    );
+  if (path === "/announcements")
+    return (
+      <Protected>
+        <AnnouncementsPage />
       </Protected>
     );
   if (path === "/delete-account")

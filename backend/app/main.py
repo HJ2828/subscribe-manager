@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
-from uuid import UUID
 from urllib.parse import quote, urlparse
+from uuid import UUID
 
 import httpx
 from fastapi import Depends, FastAPI, Header, Request
@@ -16,6 +16,10 @@ from app.google_calendar_service import GoogleCalendarService, get_google_calend
 from app.image_service import ImageService, get_image_service
 from app.notification_service import NotificationService, get_notification_service
 from app.security import CurrentUser, require_current_user
+from app.unverified_account_cleanup import (
+    UnverifiedAccountCleanupService,
+    get_unverified_account_cleanup_service,
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -178,6 +182,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         news_support_status: str = "collecting"
         cancellation_support_status: str = "collecting"
 
+    class CatalogCollectionRequest(BaseModel):
+        enabled: bool
+
+    class CollectionSettingsRequest(BaseModel):
+        enabled: bool
+        interval_hours: int
+
     class CancellationGuideRequest(BaseModel):
         catalog_id: UUID
         payment_path: str
@@ -232,6 +243,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title: str
         body: str
 
+    class AnnouncementReviewRequest(BaseModel):
+        status: Literal["published", "hidden"]
+
     @app.get("/api/v1/push/config", tags=["notifications"])
     async def push_config(
         _: Annotated[CurrentUser, Depends(require_current_user)],
@@ -280,6 +294,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "unknown": result.unknown,
             "skipped": result.skipped,
             "delayed": result.delayed,
+        }
+
+    @app.post("/api/v1/auth/cleanup-unverified", tags=["auth"])
+    async def cleanup_unverified_accounts(
+        service: Annotated[
+            UnverifiedAccountCleanupService,
+            Depends(get_unverified_account_cleanup_service),
+        ],
+        x_cron_secret: Annotated[str | None, Header()] = None,
+    ) -> dict[str, int]:
+        if (
+            not active_settings.unverified_account_cleanup_cron_secret
+            or x_cron_secret != active_settings.unverified_account_cleanup_cron_secret
+        ):
+            raise ApiError(401, "invalid_cron_secret", "계정 정리 작업 실행 권한이 없습니다.")
+        result = await service.cleanup()
+        return {
+            "scanned": result.scanned,
+            "deleted": result.deleted,
+            "skipped": result.skipped,
         }
 
     @app.get("/api/v1/google-calendar/status", tags=["google-calendar"])
@@ -455,6 +489,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> dict[str, object]:
         return await service.create_catalog(user, body.model_dump())
 
+    @app.patch("/api/v1/operations/catalogs/{catalog_id}/collection", tags=["operations"])
+    async def set_catalog_collection(
+        catalog_id: UUID,
+        body: CatalogCollectionRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.set_catalog_collection_enabled(user, str(catalog_id), body.enabled)
+
+    @app.delete("/api/v1/operations/catalogs/{catalog_id}", tags=["operations"])
+    async def delete_catalog(
+        catalog_id: UUID,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.delete_catalog(user, str(catalog_id))
+
+    @app.patch("/api/v1/operations/collection-settings", tags=["operations"])
+    async def update_collection_settings(
+        body: CollectionSettingsRequest,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.update_collection_settings(user, body.enabled, body.interval_hours)
+
     @app.post("/api/v1/operations/cancellation-guides", tags=["operations"])
     async def create_cancellation_guide(
         body: CancellationGuideRequest,
@@ -490,11 +549,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.patch("/api/v1/operations/announcements/{announcement_id}", tags=["operations"])
     async def review_announcement(
         announcement_id: UUID,
-        body: ContentReviewRequest,
+        body: AnnouncementReviewRequest,
         user: Annotated[CurrentUser, Depends(require_current_user)],
         service: Annotated[ContentService, Depends(get_content_service)],
     ) -> dict[str, object]:
-        return await service.review_announcement(user, announcement_id, body.status, body.reason)
+        return await service.review_announcement(user, announcement_id, body.status, "운영자 상태 변경")
+
+    @app.delete("/api/v1/operations/announcements/{announcement_id}", tags=["operations"])
+    async def delete_announcement(
+        announcement_id: UUID,
+        user: Annotated[CurrentUser, Depends(require_current_user)],
+        service: Annotated[ContentService, Depends(get_content_service)],
+    ) -> dict[str, object]:
+        return await service.delete_announcement(user, announcement_id)
 
     @app.patch("/api/v1/operations/{entity}/{entity_id}/review", tags=["operations"])
     async def review_content(

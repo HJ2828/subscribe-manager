@@ -104,7 +104,7 @@ def test_collection_is_shared_once_per_active_recurring_service() -> None:
     result = asyncio.run(service.process_due_news())
 
     assert service.item_query["management_type"] == "eq.recurring_subscription"
-    assert service.item_query["actual_status"] == "neq.ended"
+    assert service.item_query["actual_status"] == "eq.in_use"
     assert result["services"] == 1
     assert result["searched"] == 1
     assert service.runs[0]["outcome"] == "no_new_content"

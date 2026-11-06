@@ -170,10 +170,14 @@ export const getItemContent = (token: string, itemId: string) => contentRequest<
 export const getOperatorStatus = (token: string) => contentRequest<{ is_operator: boolean }>(token, "/api/v1/content/operator-status");
 export const getReviewData = (token: string) => contentRequest<any>(token, "/api/v1/operations/content");
 export const createCatalog = (token: string, body: unknown) => contentRequest<any>(token, "/api/v1/operations/catalogs", "POST", body);
+export const setCatalogCollection = (token: string, id: string, enabled: boolean) => contentRequest<any>(token, `/api/v1/operations/catalogs/${id}/collection`, "PATCH", { enabled });
+export const deleteCatalog = (token: string, id: string) => contentRequest<{ id: string; deleted: boolean }>(token, `/api/v1/operations/catalogs/${id}`, "DELETE");
+export const updateCollectionSettings = (token: string, body: { enabled: boolean; interval_hours: number }) => contentRequest<any>(token, "/api/v1/operations/collection-settings", "PATCH", body);
 export const createCancellationGuide = (token: string, body: unknown) => contentRequest<any>(token, "/api/v1/operations/cancellation-guides", "POST", body);
 export const createServiceNews = (token: string, body: unknown) => contentRequest<any>(token, "/api/v1/operations/news", "POST", body);
 export const recordCollectionRun = (token: string, body: unknown) => contentRequest<any>(token, "/api/v1/operations/collection-runs", "POST", body);
 export const createAnnouncement = (token: string, body: { title: string; body: string }) => contentRequest<any>(token, "/api/v1/operations/announcements", "POST", body);
-export const reviewAnnouncement = (token: string, id: string, status: "published" | "hidden", reason: string) => contentRequest<any>(token, `/api/v1/operations/announcements/${id}`, "PATCH", { status, reason });
+export const reviewAnnouncement = (token: string, id: string, status: "published" | "hidden", _reason?: string) => contentRequest<any>(token, `/api/v1/operations/announcements/${id}`, "PATCH", { status });
+export const deleteAnnouncement = (token: string, id: string) => contentRequest<{ id: string; deleted: boolean }>(token, `/api/v1/operations/announcements/${id}`, "DELETE");
 export const reviewContent = (token: string, entity: "cancellation_guide" | "news", id: string, status: string, reason: string) =>
   contentRequest<any>(token, `/api/v1/operations/${entity}/${id}/review`, "PATCH", { status, reason });

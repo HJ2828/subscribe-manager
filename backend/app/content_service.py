@@ -194,6 +194,45 @@ class ContentService:
     async def operator_status(self, user: CurrentUser) -> dict[str, bool]:
         return {"is_operator": self._operator(user)}
 
+    async def collection_settings(self, user: CurrentUser) -> dict[str, Any]:
+        self.require_operator(user)
+        rows = await self._db(
+            "GET",
+            "content_collection_settings",
+            params={"id": "eq.1", "select": "collection_enabled,interval_hours,updated_at", "limit": "1"},
+        )
+        return rows[0] if rows else {"collection_enabled": True, "interval_hours": 72, "updated_at": None}
+
+    async def update_collection_settings(
+        self, user: CurrentUser, enabled: bool, interval_hours: int
+    ) -> dict[str, Any]:
+        self.require_operator(user)
+        if not 1 <= interval_hours <= 720:
+            raise ApiError(422, "invalid_collection_interval", "수집 기간은 1~720시간 사이여야 합니다.")
+        rows = await self._db(
+            "PATCH",
+            "content_collection_settings",
+            params={"id": "eq.1"},
+            payload={
+                "collection_enabled": enabled,
+                "interval_hours": interval_hours,
+                "updated_at": datetime.now(UTC).isoformat(),
+                "updated_by": str(user.id),
+            },
+            prefer="return=representation",
+        )
+        updated = rows[0] if rows else {"collection_enabled": enabled, "interval_hours": interval_hours}
+        await self._audit(
+            user,
+            "collection_settings",
+            "1",
+            "update",
+            "전체 자동 수집 설정 변경",
+            None,
+            updated,
+        )
+        return updated
+
     async def collection_status(self, user: CurrentUser) -> dict[str, Any]:
         items = await self._db(
             "GET",
@@ -201,7 +240,7 @@ class ContentService:
             params={
                 "user_id": f"eq.{user.id}",
                 "management_type": "eq.recurring_subscription",
-                "actual_status": "neq.ended",
+                "actual_status": "eq.in_use",
                 "select": "user_id,service_name",
             },
         )
@@ -269,7 +308,7 @@ class ContentService:
             params={
                 "user_id": f"eq.{user.id}",
                 "management_type": "eq.recurring_subscription",
-                "actual_status": "neq.ended",
+                "actual_status": "eq.in_use",
                 "select": "id,service_name,plan_name,payment_method",
             },
         )
@@ -310,11 +349,7 @@ class ContentService:
             matching_items = [
                 item
                 for item in matched[row["catalog_id"]]
-                if (not row.get("country_codes") or country in row["country_codes"])
-                and (
-                    not row.get("plan_scopes")
-                    or (item.get("plan_name") and item["plan_name"] in row["plan_scopes"])
-                )
+                if not row.get("country_codes") or country in row["country_codes"]
             ]
             if matching_items:
                 result.append(
@@ -392,10 +427,6 @@ class ContentService:
     def _relevance_summary(news: dict[str, Any], items: list[dict[str, Any]], country: str) -> str:
         if news.get("country_codes") and country not in news["country_codes"]:
             return "선택한 국가에는 적용 대상이 아닐 수 있어요."
-        if news.get("plan_scopes"):
-            plans = {item.get("plan_name") for item in items if item.get("plan_name")}
-            if not plans.intersection(news["plan_scopes"]):
-                return "현재 등록한 요금제의 적용 여부를 확인해 주세요."
         return news.get("impact_summary") or "등록한 구독 서비스와 관련된 공식 소식이에요."
 
     async def scraps_for_user(self, user: CurrentUser) -> list[dict[str, Any]]:
@@ -536,11 +567,7 @@ class ContentService:
         news = [
             entry
             for entry in news
-            if (not entry.get("country_codes") or country in entry["country_codes"])
-            and (
-                not entry.get("plan_scopes")
-                or (item.get("plan_name") and item["plan_name"] in entry["plan_scopes"])
-            )
+            if not entry.get("country_codes") or country in entry["country_codes"]
         ]
         return {
             "catalog": catalog,
@@ -577,11 +604,66 @@ class ContentService:
             "operator_announcements",
             params={"select": "*", "order": "created_at.desc", "limit": "50"},
         )
+        catalog_by_id = {catalog["id"]: catalog for catalog in catalogs}
+        news_by_catalog: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for row in news:
+            catalog = catalog_by_id.get(row.get("catalog_id"), {})
+            row["catalog_name"] = catalog.get("display_name", "알 수 없는 서비스")
+            row["catalog_match_names"] = catalog.get("match_names") or []
+            news_by_catalog.setdefault(row.get("catalog_id", ""), []).append(row)
+
+        latest_run_by_catalog: dict[str, dict[str, Any]] = {}
+        for run in runs:
+            catalog_id = run.get("catalog_id")
+            if catalog_id and catalog_id not in latest_run_by_catalog:
+                latest_run_by_catalog[catalog_id] = run
+            if catalog_id:
+                run["catalog_name"] = catalog_by_id.get(catalog_id, {}).get(
+                    "display_name", "알 수 없는 서비스"
+                )
+
+        collection_services = []
+        for catalog in catalogs:
+            service_news = news_by_catalog.get(catalog["id"], [])
+            latest_run = latest_run_by_catalog.get(catalog["id"])
+            collection_services.append(
+                {
+                    "id": catalog["id"],
+                    "display_name": catalog.get("display_name"),
+                    "match_names": catalog.get("match_names") or [],
+                    "is_ott_editorial": bool(catalog.get("is_ott_editorial")),
+                    "collection_enabled": catalog.get("collection_enabled", True),
+                    "active_subscriber_count": catalog.get("active_subscriber_count", 0),
+                    "news_support_status": catalog.get("news_support_status"),
+                    "last_news_check_at": catalog.get("last_news_check_at"),
+                    "next_news_check_at": catalog.get("next_news_check_at"),
+                    "latest_run": latest_run,
+                    "published_news_count": sum(
+                        1 for row in service_news if row.get("status") == "published"
+                    ),
+                    "pending_review_news_count": sum(
+                        1 for row in service_news if row.get("status") == "pending_review"
+                    ),
+                    "latest_news": service_news[:3],
+                }
+            )
+
+        outcomes = Counter(run.get("outcome") for run in runs if run.get("outcome"))
+        last_checked_at = next(
+            (run.get("checked_at") for run in runs if run.get("checked_at")), None
+        )
         return {
             "catalogs": catalogs,
             "guides": guides,
             "news": news,
             "runs": runs,
+            "collection": {
+                "service_count": len(collection_services),
+                "last_checked_at": last_checked_at,
+                "outcomes": dict(outcomes),
+            },
+            "collection_services": collection_services,
+            "collection_settings": await self.collection_settings(user),
             "audit": audit,
             "announcements": announcements,
         }
@@ -595,6 +677,57 @@ class ContentService:
             user, "catalog", row[0]["id"], "create", "지원 카탈로그 등록", None, row[0]
         )
         return row[0]
+
+    async def set_catalog_collection_enabled(
+        self, user: CurrentUser, catalog_id: str, enabled: bool
+    ) -> dict[str, Any]:
+        self.require_operator(user)
+        before = await self._db(
+            "GET",
+            "service_catalogs",
+            params={"id": f"eq.{catalog_id}", "select": "*", "limit": "1"},
+        )
+        if not before:
+            raise ApiError(404, "catalog_not_found", "서비스 카탈로그를 찾을 수 없습니다.")
+        rows = await self._db(
+            "PATCH",
+            "service_catalogs",
+            params={"id": f"eq.{catalog_id}"},
+            payload={"collection_enabled": enabled},
+            prefer="return=representation",
+        )
+        updated = rows[0] if rows else {**before[0], "collection_enabled": enabled}
+        await self._audit(
+            user,
+            "catalog",
+            catalog_id,
+            "collection_enabled" if enabled else "collection_disabled",
+            "운영자 수집 제어 변경",
+            before[0],
+            updated,
+        )
+        return updated
+
+    async def delete_catalog(self, user: CurrentUser, catalog_id: str) -> dict[str, Any]:
+        self.require_operator(user)
+        before = await self._db(
+            "GET",
+            "service_catalogs",
+            params={"id": f"eq.{catalog_id}", "select": "*", "limit": "1"},
+        )
+        if not before:
+            raise ApiError(404, "catalog_not_found", "서비스 카탈로그를 찾을 수 없습니다.")
+        await self._audit(
+            user,
+            "catalog",
+            catalog_id,
+            "delete",
+            "운영자 서비스 카탈로그 삭제",
+            before[0],
+            None,
+        )
+        await self._db("DELETE", "service_catalogs", params={"id": f"eq.{catalog_id}"})
+        return {"id": catalog_id, "deleted": True}
 
     @staticmethod
     def _validate_source(payload: dict[str, Any], entity: str) -> None:
@@ -683,6 +816,16 @@ class ContentService:
             raise ApiError(
                 503, "openai_not_configured", "자동 소식 수집 연결이 설정되지 않았습니다."
             )
+        setting_rows = await self._db(
+            "GET",
+            "content_collection_settings",
+            params={"id": "eq.1", "select": "collection_enabled,interval_hours", "limit": "1"},
+        )
+        collection_setting = setting_rows[0] if setting_rows else {}
+        collection_enabled = collection_setting.get("collection_enabled", True)
+        interval_hours = int(
+            collection_setting.get("interval_hours") or self.settings.content_collection_interval_hours
+        )
         cleanup_rows = await self._db("POST", "rpc/cleanup_old_service_news", payload={}) or []
         cleanup = cleanup_rows[0] if cleanup_rows else {}
         items = await self._db(
@@ -690,7 +833,7 @@ class ContentService:
             "items",
             params={
                 "management_type": "eq.recurring_subscription",
-                "actual_status": "neq.ended",
+                "actual_status": "eq.in_use",
                 "select": "user_id,service_name",
             },
         )
@@ -749,7 +892,8 @@ class ContentService:
             [
                 catalog
                 for catalog in catalogs
-                if (counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial"))
+                if collection_enabled and catalog.get("collection_enabled", True)
+                and (counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial"))
                 and (
                     not catalog.get("next_news_check_at")
                     or datetime.fromisoformat(catalog["next_news_check_at"].replace("Z", "+00:00"))
@@ -762,7 +906,8 @@ class ContentService:
             "services": sum(
                 1
                 for catalog in catalogs
-                if counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial")
+                if collection_enabled and catalog.get("collection_enabled", True)
+                and (counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial"))
             ),
             "due": len(due),
             "searched": 0,
@@ -786,7 +931,7 @@ class ContentService:
                     "p_daily_cost_limit": self.settings.content_daily_cost_limit_usd,
                     "p_total_cost_limit": self.settings.content_development_total_limit_usd,
                     "p_reserved_cost": estimate,
-                    "p_interval_hours": self.settings.content_collection_interval_hours,
+                    "p_interval_hours": interval_hours,
                 },
             )
             if not claimed:
@@ -812,7 +957,7 @@ class ContentService:
                         estimate,
                     )
                     result[precheck] += 1
-                    await self._schedule_next(catalog["id"])
+                    await self._schedule_next(catalog["id"], interval_hours)
                     continue
                 locale_counts = Counter(service_locales.get(catalog["id"], []))
                 country, timezone = (
@@ -841,7 +986,7 @@ class ContentService:
                     run_id, "search_failed", {"api_requests": 1}, estimate, type(error).__name__
                 )
                 result["failed"] += 1
-            await self._schedule_next(catalog["id"])
+            await self._schedule_next(catalog["id"], interval_hours)
         return result
 
     def _reservation_cost(self) -> float:
@@ -859,7 +1004,7 @@ class ContentService:
             max(self.settings.content_estimated_cost_per_search_usd, token_cost + tool_cost), 6
         )
 
-    async def _schedule_next(self, catalog_id: str) -> None:
+    async def _schedule_next(self, catalog_id: str, interval_hours: int | None = None) -> None:
         now = datetime.now(UTC)
         await self._db(
             "PATCH",
@@ -868,7 +1013,9 @@ class ContentService:
             payload={
                 "last_news_check_at": now.isoformat(),
                 "next_news_check_at": (
-                    now + timedelta(hours=self.settings.content_collection_interval_hours)
+                    now + timedelta(
+                        hours=interval_hours or self.settings.content_collection_interval_hours
+                    )
                 ).isoformat(),
                 "collection_lease_until": None,
             },
@@ -1248,6 +1395,27 @@ class ContentService:
             user, "announcement", str(entity_id), f"status:{status}", reason, before[0], after[0]
         )
         return after[0]
+
+    async def delete_announcement(self, user: CurrentUser, entity_id: UUID) -> dict[str, Any]:
+        self.require_operator(user)
+        before = await self._db(
+            "GET",
+            "operator_announcements",
+            params={"id": f"eq.{entity_id}", "select": "*", "limit": "1"},
+        )
+        if not before:
+            raise ApiError(404, "announcement_not_found", "공지를 찾을 수 없습니다.")
+        await self._audit(
+            user,
+            "announcement",
+            str(entity_id),
+            "delete",
+            "운영 공지 삭제",
+            before[0],
+            None,
+        )
+        await self._db("DELETE", "operator_announcements", params={"id": f"eq.{entity_id}"})
+        return {"id": str(entity_id), "deleted": True}
 
     async def review(
         self, user: CurrentUser, entity: str, entity_id: UUID, status: str, reason: str

@@ -11,6 +11,8 @@ import {
   addNewsScrap,
   createAnnouncement,
   createCatalog,
+  deleteAnnouncement,
+  deleteCatalog,
   createServiceNews,
   getItemContent,
   getCollectionStatus,
@@ -19,6 +21,8 @@ import {
   getNewsScraps,
   getReviewData,
   reviewContent,
+  setCatalogCollection,
+  updateCollectionSettings,
   reviewAnnouncement,
   removeNewsScrap,
   type ItemContent,
@@ -117,7 +121,7 @@ export function ItemSupportContent({ itemId }: { itemId: string }) {
   </>;
 }
 
-export function OperationsPage({ navigation }: { navigation: ReactNode }) {
+function LegacyOperationsPage({ navigation }: { navigation: ReactNode }) {
   const { session } = useAuth();
   const [data, setData] = useState<any>(null); const [error, setError] = useState(""); const [message, setMessage] = useState("");
   const [catalogName, setCatalogName] = useState(""); const [aliases, setAliases] = useState("");
@@ -148,6 +152,198 @@ export function OperationsPage({ navigation }: { navigation: ReactNode }) {
       <section className="review-queue"><h2>검수 목록</h2>{[...data.guides.map((row: any) => ({ ...row, entity: "cancellation_guide" })), ...data.news.map((row: any) => ({ ...row, entity: "news" }))].map((row: any) => <article className="phase8-card" key={`${row.entity}-${row.id}`}><div className="phase8-card-top"><span>{row.entity === "news" ? "소식" : "해지 안내"}</span><b>{row.status}</b></div><h3>{row.title}</h3><a href={row.source_url} target="_blank" rel="noreferrer">{row.source_domain} 공식 원문 열기</a><small>확인일 {date(row.checked_at)}</small><div className="review-actions"><button onClick={() => change(row.entity, row.id, "published")} className="button primary">공개</button>{row.entity === "cancellation_guide" ? <button onClick={() => change(row.entity, row.id, "recheck_required")} className="button secondary">재확인 필요</button> : null}<button onClick={() => change(row.entity, row.id, "hidden")} className="button secondary">비공개</button></div></article>)}</section>
       <section className="audit-list"><h2>최근 변경 이력</h2>{data.audit.length ? data.audit.map((row: any) => <div key={row.id}><span>{row.entity_type} · {row.action}</span><b>{row.reason}</b><small>{date(row.created_at)}</small></div>) : <p>아직 변경 이력이 없어요.</p>}</section>
       <section className="audit-list"><h2>최근 수집 결과</h2>{data.runs.length ? data.runs.map((row: any) => <div key={row.id}><span>{row.content_kind}</span><b>{row.outcome}</b><small>{date(row.checked_at)}</small></div>) : <p>자동 수집은 아직 연결되지 않았어요. 새 소식 없음과 검색 실패를 임의로 만들지 않습니다.</p>}</section>
+    </>}
+  </main></div>;
+}
+
+const collectionOutcomeLabels: Record<string, string> = {
+  new_content: "새 소식 있음",
+  no_new_content: "새 소식 없음",
+  search_failed: "검색 실패",
+  source_failed: "출처 확인 실패",
+  precheck_failed: "사전 확인 실패",
+  unchanged: "변경 없음",
+  budget_limited: "예산 제한",
+};
+
+export function OperationsPage({ navigation }: { navigation: ReactNode }) {
+  const { session } = useAuth();
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [announcement, setAnnouncement] = useState({ title: "", body: "" });
+  const [activeTab, setActiveTab] = useState<"announcements" | "collection">("collection");
+  const [servicePage, setServicePage] = useState(0);
+  const [reviewPage, setReviewPage] = useState(0);
+  const [runPage, setRunPage] = useState(0);
+
+  const load = () => {
+    if (!session) return;
+    void getReviewData(session.access_token)
+      .then(setData)
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "운영 자료를 불러오지 못했어요."));
+  };
+  useEffect(() => { load(); }, [session]);
+
+  async function change(entity: "news" | "cancellation_guide", id: string, status: string) {
+    if (!session) return;
+    const reason = window.prompt("변경 이유를 입력해 주세요.");
+    if (!reason?.trim()) return;
+    try {
+      await reviewContent(session.access_token, entity, id, status, reason.trim());
+      setMessage("검수 상태를 변경하고 이력을 남겼어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "상태를 변경하지 못했어요.");
+    }
+  }
+
+  async function addAnnouncement(event: FormEvent) {
+    event.preventDefault();
+    if (!session) return;
+    try {
+      await createAnnouncement(session.access_token, announcement);
+      setAnnouncement({ title: "", body: "" });
+      setMessage("공지 초안을 저장했어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "공지를 저장하지 못했어요.");
+    }
+  }
+
+  async function changeAnnouncement(id: string, status: "published" | "hidden") {
+    if (!session) return;
+    try {
+      await reviewAnnouncement(session.access_token, id, status);
+      setMessage(status === "published" ? "공지를 공개했어요." : "공지를 비공개했어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "공지 상태를 변경하지 못했어요.");
+    }
+  }
+
+  async function toggleCatalogCollection(service: any) {
+    if (!session) return;
+    const enabled = service.collection_enabled === false;
+    try {
+      await setCatalogCollection(session.access_token, service.id, enabled);
+      setMessage(enabled ? "서비스 자동 수집을 재개했어요." : "서비스 자동 수집을 중지했어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "서비스 수집 설정을 변경하지 못했어요.");
+    }
+  }
+
+  async function removeAnnouncement(id: string) {
+    if (!session) return;
+    if (!window.confirm("이 공지사항을 삭제할까요?")) return;
+    try {
+      await deleteAnnouncement(session.access_token, id);
+      setMessage("공지사항을 삭제했어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "공지사항을 삭제하지 못했어요.");
+    }
+  }
+
+  async function removeCatalog(service: any) {
+    if (!session) return;
+    if (!window.confirm(`${service.display_name} 카탈로그와 저장된 소식·수집 기록을 삭제할까요?`)) return;
+    try {
+      await deleteCatalog(session.access_token, service.id);
+      setMessage("서비스 카탈로그를 삭제했어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "서비스 카탈로그를 삭제하지 못했어요.");
+    }
+  }
+
+  async function saveCollectionSettings(event: FormEvent) {
+    event.preventDefault();
+    if (!session) return;
+    const form = event.currentTarget as HTMLFormElement;
+    const data = new FormData(form);
+    const enabled = data.get("collection_enabled") === "on";
+    const intervalHours = Number(data.get("interval_hours"));
+    try {
+      await updateCollectionSettings(session.access_token, { enabled, interval_hours: intervalHours });
+      setMessage("전체 자동 수집 설정을 저장했어요.");
+      load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "전체 자동 수집 설정을 저장하지 못했어요.");
+    }
+  }
+
+  const reviewRows = [
+    ...(data?.guides || []).map((row: any) => ({ ...row, entity: "cancellation_guide" })),
+    ...(data?.news || []).filter((row: any) => row.status !== "published")
+      .map((row: any) => ({ ...row, entity: "news" })),
+  ];
+  const pageSize = 6;
+  const collectionServices = data?.collection_services || [];
+  const collectionRuns = data?.runs || [];
+  const servicePageCount = Math.max(1, Math.ceil(collectionServices.length / pageSize));
+  const reviewPageCount = Math.max(1, Math.ceil(reviewRows.length / pageSize));
+  const runPageCount = Math.max(1, Math.ceil(collectionRuns.length / pageSize));
+  const currentServicePage = Math.min(servicePage, servicePageCount - 1);
+  const currentReviewPage = Math.min(reviewPage, reviewPageCount - 1);
+  const currentRunPage = Math.min(runPage, runPageCount - 1);
+  const visibleServices = collectionServices.slice(currentServicePage * pageSize, (currentServicePage + 1) * pageSize);
+  const visibleReviewRows = reviewRows.slice(currentReviewPage * pageSize, (currentReviewPage + 1) * pageSize);
+  const visibleRuns = collectionRuns.slice(currentRunPage * pageSize, (currentRunPage + 1) * pageSize);
+
+  return <div className="app-shell">{navigation}<main className="phase8-page operations-page">
+    <header className="items-title"><h1>운영자 도구</h1><p>자동 수집 상태, 발견된 소식, 검수 대기 자료를 확인하고 공개 여부를 관리해요.</p></header>
+    {error ? <div className="notice error">{error}</div> : null}
+    {message ? <div className="notice success">{message}</div> : null}
+    <div className="operator-tabs" role="tablist" aria-label="운영자 도구 메뉴">
+      <button type="button" role="tab" aria-selected={activeTab === "announcements"} className={activeTab === "announcements" ? "active" : ""} onClick={() => setActiveTab("announcements")}>공지사항</button>
+      <button type="button" role="tab" aria-selected={activeTab === "collection"} className={activeTab === "collection" ? "active" : ""} onClick={() => setActiveTab("collection")}>수집</button>
+    </div>
+    {!data ? <div className="phase8-empty">운영 자료를 불러오는 중…</div> : <>
+      {activeTab === "collection" ? <>
+      <section className="operator-summary-grid">
+        <div className="phase8-card"><span>수집 대상 서비스</span><strong>{data.collection?.service_count || 0}개</strong></div>
+        <div className="phase8-card"><span>검수 대기 소식</span><strong>{(data.news || []).filter((row: any) => row.status === "pending_review").length}건</strong></div>
+        <div className="phase8-card"><span>최근 수집 확인</span><strong>{date(data.collection?.last_checked_at)}</strong></div>
+      </section>
+
+      <section className="phase8-card operator-collection-controls">
+        <div className="operator-section-heading"><div><h2>전체 자동 수집 설정</h2><p>전체 중단은 서비스별 수집 상태를 바꾸지 않고, 예약된 자동 수집 실행만 일시 중지해요.</p></div></div>
+        <form className="operator-collection-controls-form" onSubmit={saveCollectionSettings}>
+          <label className="operator-toggle"><input type="checkbox" name="collection_enabled" defaultChecked={data.collection_settings?.collection_enabled !== false} /><span>전체 자동 수집 허용</span></label>
+          <label>자동 수집 기간(시간)<input name="interval_hours" type="number" min="1" max="720" step="1" defaultValue={data.collection_settings?.interval_hours || 72} required /></label>
+          <button type="submit" className="button primary">설정 저장</button>
+        </form>
+      </section>
+
+      <section className="operator-collection-section">
+        <div className="operator-section-heading"><div><h2>서비스별 자동 수집 결과</h2><p>이번에 검색했는지, 새 소식이 저장됐는지, 사용자 구독과 연결 가능한지 확인합니다.</p></div></div>
+        <div className="operator-service-list">{visibleServices.map((service: any) => {
+          const run = service.latest_run;
+          const serviceNews = service.latest_news || [];
+          return <article className="phase8-card operator-service-card" key={service.id}>
+            <div className="phase8-card-top"><b>{service.display_name}</b><span>{service.collection_enabled === false ? "수집 중지" : run ? (collectionOutcomeLabels[run.outcome] || run.outcome) : "수집 기록 없음"}</span></div>
+            <p className="operator-service-meta">활성 구독 {service.active_subscriber_count || 0}개 · 공개 {service.published_news_count}건 · 검수 대기 {service.pending_review_news_count}건</p>
+            <dl className="source-meta"><div><dt>마지막 수집</dt><dd>{date(service.last_news_check_at || run?.checked_at)}</dd></div><div><dt>다음 수집</dt><dd>{date(service.next_news_check_at)}</dd></div><div><dt>매칭 이름</dt><dd>{(service.match_names || []).join(", ") || "없음"}</dd></div></dl>
+            {serviceNews.length ? <div className="operator-service-news"><b>최근 저장 소식</b>{serviceNews.map((row: any) => <div key={row.id}><span>{row.status === "published" ? "공개" : "검수 대기"}</span><a href={row.source_url} target="_blank" rel="noreferrer">{row.title}</a></div>)}</div> : <p className="operator-muted">아직 저장된 소식이 없습니다.</p>}
+            <div className="operator-service-actions"><button type="button" className="button secondary" onClick={() => toggleCatalogCollection(service)}>{service.collection_enabled === false ? "수집 재개" : "수집 중지"}</button><button type="button" className="button danger-outline" onClick={() => removeCatalog(service)}>삭제</button></div>
+          </article>;
+        })}</div>
+      <div className="operator-pagination operator-pagination-inline" aria-label="서비스 수집 결과 페이지 이동"><span>{servicePageCount > 1 ? `${currentServicePage + 1} / ${servicePageCount}` : ""}</span><button type="button" className="button secondary" aria-label="이전 서비스 수집 결과" disabled={currentServicePage === 0} onClick={() => setServicePage((page) => Math.max(0, page - 1))}>←</button><button type="button" className="button secondary" aria-label="다음 서비스 수집 결과" disabled={currentServicePage >= servicePageCount - 1} onClick={() => setServicePage((page) => Math.min(servicePageCount - 1, page + 1))}>→</button></div>
+      </section>
+
+      <section className="review-queue"><h2>검수 대기 자료</h2>{reviewRows.length ? visibleReviewRows.map((row: any) => <article className="phase8-card" key={`${row.entity}-${row.id}`}><div className="phase8-card-top"><span>{row.entity === "news" ? "소식" : "해지 안내"}</span><b>{row.status}</b></div><h3>{row.title}</h3>{row.catalog_name ? <p className="operator-muted">서비스: {row.catalog_name}</p> : null}<a href={row.source_url} target="_blank" rel="noreferrer">{row.source_domain} 공식 원문 열기</a><small>확인일 {date(row.checked_at)}</small><div className="review-actions"><button onClick={() => change(row.entity, row.id, "published")} className="button primary">공개</button>{row.entity === "cancellation_guide" ? <button onClick={() => change(row.entity, row.id, "recheck_required")} className="button secondary">재확인 필요</button> : null}<button onClick={() => change(row.entity, row.id, "hidden")} className="button secondary">비공개</button></div></article>) : <p className="operator-muted">현재 검수 대기 자료가 없습니다.</p>}</section><div className="operator-pagination operator-pagination-inline" aria-label="검수 대기 자료 페이지 이동"><span>{reviewPageCount > 1 ? `${currentReviewPage + 1} / ${reviewPageCount}` : ""}</span><button type="button" className="button secondary" aria-label="이전 검수 자료" disabled={currentReviewPage === 0} onClick={() => setReviewPage((page) => Math.max(0, page - 1))}>←</button><button type="button" className="button secondary" aria-label="다음 검수 자료" disabled={currentReviewPage >= reviewPageCount - 1} onClick={() => setReviewPage((page) => Math.min(reviewPageCount - 1, page + 1))}>→</button></div>
+
+      <section className="audit-list"><h2>최근 수집 실행</h2>{collectionRuns.length ? visibleRuns.map((row: any) => <div key={row.id}><span>{row.catalog_name || "공통 서비스"} · {row.content_kind}</span><b>{collectionOutcomeLabels[row.outcome] || row.outcome}</b><small>{date(row.checked_at)}{row.details ? ` · ${row.details}` : ""}</small></div>) : <p>자동 수집 실행 기록이 없습니다.</p>}</section><div className="operator-pagination operator-pagination-inline" aria-label="최근 수집 실행 페이지 이동"><span>{runPageCount > 1 ? `${currentRunPage + 1} / ${runPageCount}` : ""}</span><button type="button" className="button secondary" aria-label="이전 수집 실행" disabled={currentRunPage === 0} onClick={() => setRunPage((page) => Math.max(0, page - 1))}>←</button><button type="button" className="button secondary" aria-label="다음 수집 실행" disabled={currentRunPage >= runPageCount - 1} onClick={() => setRunPage((page) => Math.min(runPageCount - 1, page + 1))}>→</button></div>
+      <section className="audit-list"><h2>최근 검수 이력</h2>{data.audit?.length ? data.audit.map((row: any) => <div key={row.id}><span>{row.entity_type} · {row.action}</span><b>{row.reason}</b><small>{date(row.created_at)}</small></div>) : <p>아직 검수 이력이 없습니다.</p>}</section>
+
+      <div className="operator-pagination" aria-label="수집 결과 페이지 이동">
+        <div><span>서비스 결과 {servicePageCount > 1 ? `${currentServicePage + 1} / ${servicePageCount}` : ""}</span><button type="button" className="button secondary" disabled={currentServicePage === 0} onClick={() => setServicePage((page) => Math.max(0, page - 1))}>이전</button><button type="button" className="button secondary" disabled={currentServicePage >= servicePageCount - 1} onClick={() => setServicePage((page) => Math.min(servicePageCount - 1, page + 1))}>다음</button></div>
+        <div><span>검수 자료 {reviewPageCount > 1 ? `${currentReviewPage + 1} / ${reviewPageCount}` : ""}</span><button type="button" className="button secondary" disabled={currentReviewPage === 0} onClick={() => setReviewPage((page) => Math.max(0, page - 1))}>이전</button><button type="button" className="button secondary" disabled={currentReviewPage >= reviewPageCount - 1} onClick={() => setReviewPage((page) => Math.min(reviewPageCount - 1, page + 1))}>다음</button></div>
+      </div>
+      </> : null}
+      {activeTab === "announcements" ? <section id="announcements" className="announcement-admin"><form className="phase8-card" onSubmit={addAnnouncement}><h2>공지사항 작성</h2><p>모든 로그인 사용자에게 표시할 공지를 작성합니다.</p><label>제목<input required maxLength={160} value={announcement.title} onChange={(event) => setAnnouncement({ ...announcement, title: event.target.value })} /></label><label>내용<textarea required maxLength={5000} value={announcement.body} onChange={(event) => setAnnouncement({ ...announcement, body: event.target.value })} /></label><button className="button primary">공지 초안 저장</button></form><div className="phase8-card"><h2>공지 목록</h2>{data.announcements?.length ? data.announcements.map((row: any) => <details className="announcement-item" key={row.id}><summary><b>{row.title}</b><span>{row.status === "published" ? "공개" : "비공개"}</span></summary><div className="announcement-item-body"><p>{row.body}</p><div className="review-actions"><button type="button" className="button primary announcement-status-button" onClick={() => changeAnnouncement(row.id, row.status === "published" ? "hidden" : "published")}>{row.status === "published" ? "비공개" : "전체 공개"}</button><button type="button" className="button danger-outline announcement-delete-button" onClick={() => removeAnnouncement(row.id)}>삭제</button></div></div></details>) : <p>작성한 공지가 없습니다.</p>}</div></section> : null}
     </>}
   </main></div>;
 }

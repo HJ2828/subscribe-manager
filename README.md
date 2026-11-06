@@ -24,9 +24,9 @@ Supabase 프로젝트 값이 없어도 상태 화면과 Backend 단위 테스트
 
 ## Supabase Auth 외부 설정
 
-1. Supabase Dashboard의 **Authentication > Sign In / Providers > Email**에서 이메일 가입과 이메일 확인을 켭니다.
+1. Supabase Dashboard의 **Authentication > Sign In / Providers > Email**에서 이메일 가입은 켜고 `Confirm email`은 끕니다.
 2. **Authentication > URL Configuration**의 Site URL은 로컬에서 `http://localhost:5173`으로 설정합니다.
-3. Redirect URLs에 `http://localhost:5173/auth/callback`과 `http://localhost:5173/reset-password`를 추가합니다. 운영에서는 같은 두 경로를 실제 HTTPS 도메인으로도 추가합니다.
+3. Redirect URLs에 `http://localhost:5173/reset-password`를 추가합니다. 운영에서는 같은 경로를 실제 HTTPS 도메인으로도 추가합니다.
 4. 비밀번호 최소 길이는 8자로 맞춥니다. 애플리케이션은 영문과 숫자를 각각 하나 이상 요구합니다.
 5. 자체 SMTP를 쓰면 **Project Settings > Authentication > SMTP Settings**에 제공자의 Host, Port, Username, Password, Sender email, Sender name을 입력합니다. 실제 값은 제공자 콘솔에서 확인하고 저장소에는 기록하지 않습니다.
 6. 루트 `.env`의 `SUPABASE_SECRET_KEY`에는 서버용 secret key를 넣습니다. 이 값은 FastAPI의 회원 탈퇴 처리에만 쓰며 `VITE_*` 변수에는 넣지 않습니다.
@@ -39,6 +39,12 @@ Supabase 프로젝트 값이 없어도 상태 화면과 Backend 단위 테스트
 2. `VAPID_SUBJECT`에는 운영 연락처 이메일 또는 HTTPS 주소를 설정합니다.
 3. 운영 스케줄러에서 `POST /api/v1/notifications/process`를 주기적으로 호출하고 `X-Cron-Secret` 헤더에 Backend의 `NOTIFICATION_CRON_SECRET`과 같은 값을 전달합니다.
 4. Web Push는 운영 HTTPS, 브라우저 권한과 일부 모바일 환경의 PWA 설치 조건이 필요합니다. 설정 전이나 미지원 환경에서도 앱 안 알림은 유지됩니다.
+
+## 이메일 미인증 계정 자동 정리
+
+1. `.env`에 `UNVERIFIED_ACCOUNT_CLEANUP_CRON_SECRET`을 별도 비밀값으로 설정하고, `UNVERIFIED_ACCOUNT_RETENTION_DAYS`로 보존 기간을 설정합니다. 기본값은 7일입니다.
+2. 운영 스케줄러에서 `POST /api/v1/auth/cleanup-unverified`를 주기적으로 호출하고 `X-Cron-Secret` 헤더에 같은 비밀값을 전달합니다.
+3. 서버가 Supabase Admin API로 조회한 사용자 중 이메일 미인증 상태이며 보존 기간을 지난 계정만 삭제합니다. `profiles`는 외래키 cascade 설정에 따라 함께 삭제됩니다.
 
 ## Phase 7 Google Calendar 설정
 

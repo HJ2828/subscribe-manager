@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:admin@example.invalid"
     notification_cron_secret: str | None = None
     notification_max_attempts: int = 3
+    unverified_account_cleanup_cron_secret: str | None = None
+    unverified_account_retention_days: int = 7
     google_oauth_client_id: str | None = None
     google_oauth_client_secret: str | None = None
     google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/google-calendar/callback"

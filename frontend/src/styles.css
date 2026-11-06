@@ -100,12 +100,6 @@ p {
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
-.header-context {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
-}
-
 .auth-page {
   min-height: 100vh;
   background: #f6f7fa;
@@ -335,10 +329,6 @@ p {
 .account-help a {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-.divider {
-  height: 1px;
-  background: var(--line);
 }
 .card-footnote,
 .card-copy {
@@ -907,9 +897,6 @@ p {
   .brand-mark img {
     width: 18px;
     height: 18px;
-  }
-  .header-context {
-    font-size: 11px;
   }
   .auth-content {
     padding: 32px 20px 40px;
@@ -1517,3 +1504,14 @@ p {
     flex-wrap: wrap;
   }
 }
+.settings-shortcuts { display: grid; gap: 10px; }
+.settings-shortcuts h2 { margin: 0; color: var(--ink); font-size: 18px; line-height: 1.45; }
+.settings-shortcuts .button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; }
+.settings-shortcuts .button-icon { width: 18px; height: 18px; }
+.announcement-list { display: grid; gap: 16px; max-width: 900px; }
+.announcement-card { gap: 10px; }
+.announcement-card h2, .announcement-card p { margin: 0; }
+.announcement-card p { white-space: pre-wrap; line-height: 1.7; }
+.announcement-card-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.announcement-card-heading time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+@media (max-width: 700px) { .announcement-card-heading { display: grid; gap: 6px; } }

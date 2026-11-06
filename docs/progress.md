@@ -1413,3 +1413,9 @@
 ## 2026-11-06 · 버블차트 색상 분산
 - 버블차트에 항목 ID 기반 의사 랜덤 색상 팔레트를 적용했다.
 - 새로고침해도 동일 항목은 같은 색을 유지하고, 선택된 버블의 강조 스타일은 유지한다.
+
+## 2026-11-06 · Current changes committed
+- Added Phase 8 content collection controls, service catalog collection settings, and related API/UI behavior.
+- Added unverified-account cleanup endpoint configuration, service, migration, and tests.
+- Validation: frontend production build passed; frontend tests had 5 existing expectation failures; backend tests were blocked by missing httpx and cryptography dependencies.
+- Next: apply the new Supabase migration and configure the cleanup scheduler in the deployment environment.
