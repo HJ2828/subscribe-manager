@@ -811,10 +811,17 @@ class ContentService:
                 catalog["is_ott_editorial"] = True
         return catalogs
 
-    async def process_due_news(self) -> dict[str, int]:
+    async def process_due_news(self, scope: str | None = None) -> dict[str, int]:
         if not self.settings.openai_api_key:
             raise ApiError(
                 503, "openai_not_configured", "자동 소식 수집 연결이 설정되지 않았습니다."
+            )
+        collection_scope = scope or self.settings.content_collection_scope
+        if collection_scope not in {"all", "ott_editorial"}:
+            raise ApiError(
+                422,
+                "invalid_collection_scope",
+                "자동 소식 수집 범위는 all 또는 ott_editorial이어야 합니다.",
             )
         setting_rows = await self._db(
             "GET",
@@ -888,11 +895,17 @@ class ContentService:
                 payload={"active_subscriber_count": counts[catalog["id"]]},
             )
         now = datetime.now(UTC)
+
+        def is_target_catalog(catalog: dict[str, Any]) -> bool:
+            return collection_scope == "all" or bool(catalog.get("is_ott_editorial"))
+
         due = sorted(
             [
                 catalog
                 for catalog in catalogs
-                if collection_enabled and catalog.get("collection_enabled", True)
+                if is_target_catalog(catalog)
+                and collection_enabled
+                and catalog.get("collection_enabled", True)
                 and (counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial"))
                 and (
                     not catalog.get("next_news_check_at")
@@ -906,7 +919,9 @@ class ContentService:
             "services": sum(
                 1
                 for catalog in catalogs
-                if collection_enabled and catalog.get("collection_enabled", True)
+                if is_target_catalog(catalog)
+                and collection_enabled
+                and catalog.get("collection_enabled", True)
                 and (counts[catalog["id"]] > 0 or catalog.get("is_ott_editorial"))
             ),
             "due": len(due),

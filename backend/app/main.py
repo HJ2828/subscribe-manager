@@ -3,7 +3,7 @@ from urllib.parse import quote, urlparse
 from uuid import UUID
 
 import httpx
-from fastapi import Depends, FastAPI, Header, Request
+from fastapi import Depends, FastAPI, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -458,13 +458,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def process_content(
         service: Annotated[ContentService, Depends(get_content_service)],
         x_cron_secret: Annotated[str | None, Header()] = None,
+        scope: Annotated[str | None, Query()] = None,
     ) -> dict[str, int]:
         if (
             not active_settings.content_collection_cron_secret
             or x_cron_secret != active_settings.content_collection_cron_secret
         ):
             raise ApiError(401, "invalid_cron_secret", "자동 소식 수집 실행 권한이 없습니다.")
-        return await service.process_due_news()
+        return await service.process_due_news(scope)
 
     @app.get("/api/v1/content/items/{item_id}", tags=["content"])
     async def item_content(

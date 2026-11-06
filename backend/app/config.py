@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     content_model_output_cost_per_million_usd: float = 4.50
     content_web_search_cost_per_call_usd: float = 0.01
     content_ott_editorial_enabled: bool = True
+    content_collection_scope: str = "all"
 
     @property
     def cors_origins(self) -> list[str]:
