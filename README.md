@@ -18,7 +18,7 @@
 - Frontend: React, Vite, TypeScript
 - Backend: FastAPI, Python
 - Data/Auth/Storage: Supabase
-- 외부 연동: OpenAI 이미지·소식 처리, Web Push, Google Calendar 단방향 내보내기
+- 외부 연동: OpenAI 이미지·소식 처리, Web Push
 
 ## 사전 요구사항
 
@@ -89,7 +89,13 @@ npx.cmd supabase test db
 
 ## 인증·회원 탈퇴
 
-Supabase Dashboard에서 Email Provider와 Site URL·Redirect URL을 설정합니다. 앱의 회원 탈퇴 API는 서버에서 삭제 요청과 Auth 계정 삭제를 처리하며, 실패 시 계정을 유지하고 재시도 상태를 기록합니다.
+Supabase Dashboard에서 Email Provider와 Site URL·Redirect URL을 설정합니다. Google 간편로그인을 사용하려면 Google Cloud에서 Web OAuth 클라이언트를 만든 뒤, Supabase Dashboard의 Authentication > Providers > Google에 Client ID와 Secret을 등록합니다. Google Cloud의 승인된 리디렉션 URI는 `https://<project-ref>.supabase.co/auth/v1/callback`으로 설정하고, Supabase의 URL Configuration에는 로컬 및 운영 프론트엔드 주소를 허용 목록으로 추가합니다. 앱은 Google에 추가 API 권한을 요청하지 않습니다.
+
+카카오 간편로그인을 사용하려면 Kakao Developers에서 앱을 만든 뒤 REST API 키와 Kakao Login Client Secret을 발급합니다. Supabase Dashboard의 Authentication > Providers > Kakao에 두 값을 등록하고, Kakao Developers의 REST API 키 설정에 Supabase가 표시한 callback URL(`https://<project-ref>.supabase.co/auth/v1/callback`)을 등록합니다. 카카오 로그인 기능과 이메일·프로필 동의항목을 활성화해야 하며, 앱은 카카오 API를 별도로 호출하지 않습니다.
+
+Google·카카오 OAuth 설정이 완료되면 로그인·회원가입 화면의 `Google로 계속하기`와 `카카오로 계속하기` 버튼을 사용할 수 있습니다. 소셜 로그인은 이메일·비밀번호 계정의 비밀번호 재설정을 대체하지 않으므로 이메일 인증 흐름은 함께 유지합니다. 앱의 회원 탈퇴 API는 서버에서 삭제 요청과 Auth 계정 삭제를 처리하며, 실패 시 계정을 유지하고 재시도 상태를 기록합니다.
+
+Google Auth Platform 브랜딩 인증에 사용할 공개 문서는 운영 사이트의 `/privacy`(개인정보처리방침)와 `/terms`(서비스 이용약관) 경로에 제공합니다. 두 페이지는 로그인 없이 접근할 수 있으며, 설정 화면의 계정 영역에서도 확인할 수 있습니다.
 
 필요한 주요 환경변수:
 
@@ -110,18 +116,6 @@ Header: X-Cron-Secret: <NOTIFICATION_CRON_SECRET>
 ```
 
 Web Push는 HTTPS·브라우저 권한·기기별 구독이 필요합니다. 지원되지 않거나 권한이 거부된 환경에서도 앱 내 알림은 유지됩니다.
-
-## Google Calendar
-
-Google Cloud에서 Calendar API와 OAuth 동의 화면을 설정한 뒤 다음 값을 Backend에 설정합니다.
-
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
-- `GOOGLE_OAUTH_REDIRECT_URI`
-- `GOOGLE_TOKEN_ENCRYPTION_KEY`
-- `GOOGLE_CALENDAR_CRON_SECRET`
-
-Redirect URI는 Google Cloud와 `.env`에 정확히 같아야 합니다. 연동은 앱에서 Google Calendar로 내보내는 단방향이며, 내부 일정은 외부 동기화 실패와 무관하게 유지됩니다.
 
 ## Phase 8 운영 기능
 
@@ -172,4 +166,4 @@ Header: X-Cron-Secret: <UNVERIFIED_ACCOUNT_CLEANUP_CRON_SECRET>
 
 ## 범위 밖 기능
 
-MVP는 실제 결제·환불·해지를 실행하지 않습니다. 은행·카드 자동 연동, Google Calendar 양방향 동기화, 환율 API 자동 환산, OTT 전체 편성 보장과 대화형 자동 등록은 현재 범위 밖입니다.
+MVP는 실제 결제·환불·해지를 실행하지 않습니다. 은행·카드 자동 연동, Google Calendar 연동, 환율 API 자동 환산, OTT 전체 편성 보장과 대화형 자동 등록은 현재 범위 밖입니다.

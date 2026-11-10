@@ -45,7 +45,6 @@
 .report-controls,
 .phase8-card,
 .scrap-filters,
-.google-calendar-card,
 .account-card,
 .deletion-card,
 .ott-editorial-section,
@@ -262,7 +261,6 @@
 .report-card,
 .report-panel,
 .phase8-card,
-.google-calendar-card,
 .account-card,
 .deletion-card { padding: var(--glass-card-padding); }
 
@@ -472,7 +470,7 @@ body.sidebar-collapsed .sidebar-open-button { display: inline-grid; }
   .page-header-actions { justify-content: flex-start; flex-wrap: wrap; }
   .page-header-mascot { position: absolute; top: 74px; right: 18px; width: 52px; height: 52px; opacity: .78; }
   .page-header-actions .button { min-height: 44px; }
-  .auth-card, .settings-card, .dashboard-card, .form-card, .help-card, .detail-card, .phase4-card, .full-calendar-card, .push-card, .notification-card, .report-card, .report-panel, .phase8-card, .google-calendar-card, .account-card, .deletion-card { padding: 18px; }
+  .auth-card, .settings-card, .dashboard-card, .form-card, .help-card, .detail-card, .phase4-card, .full-calendar-card, .push-card, .notification-card, .report-card, .report-panel, .phase8-card, .account-card, .deletion-card { padding: 18px; }
   .filter-card, .calendar-toolbar, .report-controls, .scrap-filters { padding: 16px; }
   .items-card-heading { padding: 16px 18px; }
   .empty-state, .phase5-state, .phase8-empty, .report-empty, .home-empty { padding: 18px; }

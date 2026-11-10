@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useAuth } from "../auth/AuthContext";
 import { addDays, todayInTimeZone } from "../home/homeModel";
-import { getGoogleCalendarStatus, type GoogleCalendarStatus } from "../lib/api";
 import { syncRecurringItemDates } from "../lib/recurringItems";
 import { typeLabel, type ManagedItem } from "../phase3/model";
 import { PageHeader } from "../components/ui";
@@ -60,7 +59,6 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
   const [kinds, setKinds] = useState<Set<CalendarEventKind>>(() => new Set(KINDS));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null);
   const selectedDatePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,11 +84,6 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
     });
     return () => { active = false; };
   }, [client, session]);
-
-  useEffect(() => {
-    if (!session?.access_token) return;
-    getGoogleCalendarStatus(session.access_token).then(setGoogleStatus).catch(() => setGoogleStatus(null));
-  }, [session?.access_token]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -134,7 +127,7 @@ export function CalendarPage({ navigation }: { navigation: ReactNode }) {
     <div className="app-shell">
       {navigation}
       <main className="calendar-page">
-        <PageHeader eyebrow="캘린더" title="캘린더" description="결제와 만료 일정을 날짜별로 확인하세요." actions={<button className="google-calendar-link" type="button" onClick={() => navigate("/settings")}>Google Calendar · {googleStatus?.status === "connected" ? "연결됨" : googleStatus?.status === "sync_delayed" ? "동기화 지연" : googleStatus?.status === "reauth_required" ? "재연결 필요" : "연결 설정"}</button>} />
+        <PageHeader eyebrow="캘린더" title="캘린더" description="결제와 만료 일정을 날짜별로 확인하세요." />
 
         <section className="calendar-toolbar" aria-label="캘린더 보기와 필터">
           <label className="view-select"><select aria-label="캘린더 보기" value={view} onChange={(event) => setView(event.target.value as View)}><option value="month">월간</option><option value="week">주간</option><option value="list">목록</option></select></label>

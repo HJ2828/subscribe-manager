@@ -7,6 +7,7 @@ const authMock = vi.hoisted(() => ({
   client: {
     auth: {
       signInWithPassword: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signUp: vi.fn(),
       resend: vi.fn(),
       resetPasswordForEmail: vi.fn(),
@@ -52,6 +53,30 @@ describe("Phase 2 account screens", () => {
     expect(authMock.client.auth.signInWithPassword).not.toHaveBeenCalled();
   });
 
+  it("starts Google OAuth from the login screen", async () => {
+    authMock.client.auth.signInWithOAuth.mockResolvedValue({ data: {}, error: null });
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Google로 계속하기" }));
+
+    expect(authMock.client.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+  });
+
+  it("starts Kakao OAuth from the login screen", async () => {
+    authMock.client.auth.signInWithOAuth.mockResolvedValue({ data: {}, error: null });
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "카카오로 계속하기" }));
+
+    expect(authMock.client.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "kakao",
+      options: { redirectTo: window.location.origin },
+    });
+  });
+
   it("shows the required account deletion completion wording", () => {
     window.history.replaceState(null, "", "/account-deleted");
     render(<App />);
@@ -66,6 +91,8 @@ describe("Phase 2 account screens", () => {
     ["/signup", "회원가입"],
     ["/forgot-password", "비밀번호 재설정"],
     ["/reset-password", "재설정 링크가 만료되었어요"],
+    ["/privacy", "개인정보처리방침"],
+    ["/terms", "서비스 이용약관"],
   ])("renders the public Phase 2 screen at %s", (path, heading) => {
     window.history.replaceState(null, "", path);
     render(<App />);

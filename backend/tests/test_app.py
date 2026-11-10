@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from app.account_deletion import DeletionResult, get_account_deletion_service
 from app.config import Settings, get_settings
 from app.errors import ApiError
-from app.google_calendar_service import get_google_calendar_service
 from app.main import app, create_app
 from app.security import CurrentUser, require_current_user
 from app.unverified_account_cleanup import CleanupResult, get_unverified_account_cleanup_service
@@ -104,36 +103,6 @@ def test_push_config_does_not_expose_private_key() -> None:
 
 def test_notification_worker_rejects_missing_cron_secret() -> None:
     response = client.post("/api/v1/notifications/process")
-    assert response.status_code == 401
-    assert response.json()["error"]["code"] == "invalid_cron_secret"
-
-
-class GoogleStatusService:
-    async def status(self, user: CurrentUser) -> dict[str, object]:
-        assert user.id == UUID("11111111-1111-1111-1111-111111111111")
-        return {
-            "configured": True,
-            "status": "connected",
-            "calendar_name": "subscribe-manager",
-            "selected_event_types": ["payment"],
-            "last_sync_at": None,
-            "last_error": None,
-        }
-
-
-def test_google_calendar_status_does_not_expose_tokens() -> None:
-    app.dependency_overrides[require_current_user] = override_user
-    app.dependency_overrides[get_google_calendar_service] = GoogleStatusService
-
-    response = client.get("/api/v1/google-calendar/status")
-
-    assert response.status_code == 200
-    assert response.json()["status"] == "connected"
-    assert "token" not in response.text.lower()
-
-
-def test_google_calendar_worker_rejects_missing_cron_secret() -> None:
-    response = client.post("/api/v1/google-calendar/process")
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "invalid_cron_secret"
 

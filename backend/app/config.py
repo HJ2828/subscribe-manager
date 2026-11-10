@@ -32,11 +32,6 @@ class Settings(BaseSettings):
     notification_max_attempts: int = 3
     unverified_account_cleanup_cron_secret: str | None = None
     unverified_account_retention_days: int = 7
-    google_oauth_client_id: str | None = None
-    google_oauth_client_secret: str | None = None
-    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/google-calendar/callback"
-    google_token_encryption_key: str | None = None
-    google_calendar_cron_secret: str | None = None
     frontend_app_url: str = "http://localhost:5173"
     phase8_operator_user_ids: str = ""
     content_collection_model: str = "gpt-5.4-mini"

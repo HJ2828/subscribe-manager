@@ -31,7 +31,6 @@ import {
 import { CalendarPage } from "./phase5/CalendarPage";
 import { NotificationsPage } from "./phase5/NotificationsPage";
 import { ReportPage } from "./phase6/ReportPage";
-import { GoogleCalendarSettings } from "./phase7/GoogleCalendarSettings";
 import { NewsPage, OperationsPage, ScrapsPage } from "./phase8/Phase8Pages";
 import { PageHeader } from "./components/ui";
 import "./styles.css";
@@ -174,6 +173,132 @@ function PublicHeader() {
   );
 }
 
+function LegalPage({ type }: { type: "privacy" | "terms" }) {
+  const isPrivacy = type === "privacy";
+  return (
+    <div className="legal-page">
+      <PublicHeader />
+      <main className="legal-content">
+        <div className="legal-heading">
+          <span className="eyebrow">달리 안내</span>
+          <h1>{isPrivacy ? "개인정보처리방침" : "서비스 이용약관"}</h1>
+          <p>시행일: 2026년 11월 10일</p>
+        </div>
+        {isPrivacy ? (
+          <div className="legal-document">
+            <p>
+              달리(이하 “서비스”)는 구독과 멤버십을 관리하는 서비스입니다. 서비스는
+              이용자의 개인정보를 안전하게 처리하고, 관련 법령과 본 방침을 따릅니다.
+            </p>
+            <section>
+              <h2>1. 수집하는 정보</h2>
+              <p>
+                회원가입과 로그인 과정에서 이메일 주소, Google 로그인 시 Google이
+                제공하는 이름·이메일·프로필 이미지와 같은 기본 프로필 정보를 받을 수
+                있습니다. 서비스 이용 과정에서는 구독·멤버십 정보, 알림 설정, 서비스
+                이용 기록, 오류·접속 기록이 저장될 수 있습니다.
+              </p>
+            </section>
+            <section>
+              <h2>2. 개인정보의 이용 목적</h2>
+              <p>
+                수집한 정보는 계정 확인, 서비스 제공, 구독 및 알림 관리, 저장 공간 관리,
+                서비스 보안과 오류 대응을 위해서만 이용합니다. Google 로그인은 계정
+                인증에 사용하며 Google Calendar 등 별도 Google 서비스의 권한을 요청하지
+                않습니다.
+              </p>
+            </section>
+            <section>
+              <h2>3. 이미지와 외부 처리</h2>
+              <p>
+                이용자가 등록한 이미지는 이용자의 요청에 따라 서비스 기능 제공을 위해
+                저장하거나 분석할 수 있습니다. 이미지 분석을 요청하면 분석에 필요한
+                이미지가 외부 AI 처리 서비스로 전송될 수 있으며, 민감한 개인정보가
+                포함되지 않도록 이용자가 직접 확인해야 합니다.
+              </p>
+            </section>
+            <section>
+              <h2>4. 보관과 파기</h2>
+              <p>
+                개인정보는 서비스 이용 기간 동안 보관합니다. 회원 탈퇴를 요청하면 계정
+                접근을 중단하고 관련 개인정보와 이용자 자료를 삭제합니다. 법령상 보관이
+                필요한 정보는 해당 기간 동안 별도로 보관한 뒤 파기합니다.
+              </p>
+            </section>
+            <section>
+              <h2>5. 이용자의 권리</h2>
+              <p>
+                이용자는 설정에서 계정 정보를 확인하고, 회원 탈퇴를 요청할 수 있습니다.
+                개인정보에 관한 문의나 삭제 요청은 아래 연락처로 보내 주세요.
+              </p>
+            </section>
+            <section>
+              <h2>6. 문의</h2>
+              <p>
+                개인정보 관련 문의: <a href="mailto:shihihi01@gmail.com">shihihi01@gmail.com</a>
+              </p>
+            </section>
+          </div>
+        ) : (
+          <div className="legal-document">
+            <p>
+              본 약관은 달리 서비스의 이용 조건과 운영에 관한 사항을 정합니다. 회원은
+              본 약관에 동의한 경우에만 서비스를 이용할 수 있습니다.
+            </p>
+            <section>
+              <h2>1. 서비스의 내용</h2>
+              <p>
+                서비스는 이용자가 구독·멤버십 정보를 등록하고, 결제 예정일과 알림을
+                관리하며, 관련 소식을 확인할 수 있도록 돕습니다. 서비스가 실제 결제를
+                실행하거나 구독 계약을 대신 체결하는 것은 아닙니다.
+              </p>
+            </section>
+            <section>
+              <h2>2. 회원의 책임</h2>
+              <p>
+                회원은 정확한 정보를 등록하고 계정과 인증 수단을 안전하게 관리해야 합니다.
+                타인의 정보를 무단으로 등록하거나 서비스의 정상적인 운영을 방해해서는
+                안 됩니다. 회원이 등록한 구독 정보의 정확성과 실제 결제·해지 여부는
+                회원이 각 제공업체에서 직접 확인해야 합니다.
+              </p>
+            </section>
+            <section>
+              <h2>3. 외부 서비스</h2>
+              <p>
+                Google 로그인, Supabase 인증, 이미지 분석 등 외부 서비스가 사용될 수
+                있습니다. 외부 서비스의 장애·정책 변경으로 서비스 이용이 제한될 수
+                있으며, 해당 서비스에는 각 제공자의 약관과 개인정보처리방침이 적용됩니다.
+              </p>
+            </section>
+            <section>
+              <h2>4. 서비스 변경과 중단</h2>
+              <p>
+                운영자는 보안, 기술적 필요 또는 운영 정책에 따라 서비스의 기능과 내용을
+                변경하거나 일시적으로 중단할 수 있습니다. 중요한 변경이나 중단이 있는
+                경우 서비스 내 공지 등 합리적인 방법으로 안내합니다.
+              </p>
+            </section>
+            <section>
+              <h2>5. 회원 탈퇴</h2>
+              <p>
+                회원은 설정 화면에서 언제든지 탈퇴를 요청할 수 있습니다. 탈퇴가 완료되면
+                계정에 접근할 수 없으며, 개인정보와 이용자 자료는 개인정보처리방침에 따라
+                처리됩니다.
+              </p>
+            </section>
+            <section>
+              <h2>6. 문의</h2>
+              <p>
+                서비스 이용 문의: <a href="mailto:shihihi01@gmail.com">shihihi01@gmail.com</a>
+              </p>
+            </section>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
 function NoticeBox({ notice }: { notice: Notice }) {
   if (!notice) return null;
   const icon =
@@ -304,6 +429,7 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [oauthProvider, setOauthProvider] = useState<"google" | "kakao" | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<Notice>(() => {
     const message = sessionStorage.getItem("auth_notice");
@@ -339,6 +465,38 @@ function LoginPage() {
     }
     setPassword("");
     go("/", true);
+  }
+
+  async function signInWithGoogle() {
+    if (!client || busy) return;
+    setBusy(true);
+    setOauthProvider("google");
+    setNotice(null);
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      setBusy(false);
+      setOauthProvider(null);
+      setNotice({ tone: "error", text: "Google 로그인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+    }
+  }
+
+  async function signInWithKakao() {
+    if (!client || busy) return;
+    setBusy(true);
+    setOauthProvider("kakao");
+    setNotice(null);
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "kakao",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      setBusy(false);
+      setOauthProvider(null);
+      setNotice({ tone: "error", text: "카카오 로그인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+    }
   }
 
   return (
@@ -387,6 +545,15 @@ function LoginPage() {
           )}
         </button>
       </form>
+      <div className="social-login-divider" aria-hidden="true"><span>또는</span></div>
+      <button className="button google-login-button full" disabled={busy} type="button" onClick={signInWithGoogle}>
+        <span className="google-login-mark" aria-hidden="true">G</span>
+        {busy && oauthProvider === "google" ? "Google 로그인 연결 중" : "Google로 계속하기"}
+      </button>
+      <button className="button kakao-login-button full" disabled={busy} type="button" onClick={signInWithKakao}>
+        <span className="kakao-login-mark" aria-hidden="true">K</span>
+        {busy && oauthProvider === "kakao" ? "카카오 로그인 연결 중" : "카카오로 계속하기"}
+      </button>
       <div className="account-help">
         <AppLink to="/signup">회원가입</AppLink>
         <AppLink to="/forgot-password">비밀번호 찾기</AppLink>
@@ -400,6 +567,7 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [oauthProvider, setOauthProvider] = useState<"google" | "kakao" | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<Notice>(null);
 
@@ -446,6 +614,38 @@ function SignupPage() {
     }
     setPassword("");
     go("/", true);
+  }
+
+  async function signInWithGoogle() {
+    if (!client || busy) return;
+    setBusy(true);
+    setOauthProvider("google");
+    setNotice(null);
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      setBusy(false);
+      setOauthProvider(null);
+      setNotice({ tone: "error", text: "Google 로그인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+    }
+  }
+
+  async function signInWithKakao() {
+    if (!client || busy) return;
+    setBusy(true);
+    setOauthProvider("kakao");
+    setNotice(null);
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "kakao",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      setBusy(false);
+      setOauthProvider(null);
+      setNotice({ tone: "error", text: "카카오 로그인에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+    }
   }
 
   return (
@@ -495,6 +695,15 @@ function SignupPage() {
           )}
         </button>
       </form>
+      <div className="social-login-divider" aria-hidden="true"><span>또는</span></div>
+      <button className="button google-login-button full" disabled={busy} type="button" onClick={signInWithGoogle}>
+        <span className="google-login-mark" aria-hidden="true">G</span>
+        {busy && oauthProvider === "google" ? "Google 로그인 연결 중" : "Google로 계속하기"}
+      </button>
+      <button className="button kakao-login-button full" disabled={busy} type="button" onClick={signInWithKakao}>
+        <span className="kakao-login-mark" aria-hidden="true">K</span>
+        {busy && oauthProvider === "kakao" ? "카카오 로그인 연결 중" : "카카오로 계속하기"}
+      </button>
       <AppLink to="/login" className="center-link">
         이미 계정이 있나요? 로그인
       </AppLink>
@@ -2072,8 +2281,11 @@ function SettingsPage() {
               >
                 {logoutBusy ? "로그아웃 중" : "로그아웃"}
               </button>
+              <nav className="account-legal-links" aria-label="법적 고지">
+                <AppLink to="/privacy">개인정보처리방침</AppLink>
+                <AppLink to="/terms">서비스 이용약관</AppLink>
+              </nav>
             </section>
-            {session?.access_token ? <GoogleCalendarSettings accessToken={session.access_token} /> : null}
             <section className="settings-card deletion-card">
               <h2>회원 탈퇴</h2>
               <p>
@@ -2210,6 +2422,8 @@ export default function App() {
   if (path === "/signup") return <SignupPage />;
   if (path === "/forgot-password") return <ForgotPasswordPage />;
   if (path === "/reset-password") return <ResetPasswordPage />;
+  if (path === "/privacy") return <LegalPage type="privacy" />;
+  if (path === "/terms") return <LegalPage type="terms" />;
   if (path === "/account-deleted") return <AccountDeletedPage />;
   if (path === "/images/new")
     return (

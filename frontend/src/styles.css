@@ -100,6 +100,59 @@ p {
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
+.legal-page {
+  min-height: 100vh;
+  background: #f6f7fa;
+}
+.legal-content {
+  width: min(760px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 64px 0 96px;
+}
+.legal-heading {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.legal-heading .eyebrow {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+.legal-heading h1 {
+  color: var(--ink);
+  font-size: 36px;
+  letter-spacing: -1.2px;
+}
+.legal-heading p {
+  color: var(--muted);
+  font-size: 14px;
+}
+.legal-document {
+  display: grid;
+  gap: 28px;
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.legal-document section {
+  display: grid;
+  gap: 8px;
+}
+.legal-document h2 {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.5;
+}
+.legal-document p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.8;
+}
+.legal-document a {
+  overflow-wrap: anywhere;
+}
 .auth-page {
   min-height: 100vh;
   background: #f6f7fa;
@@ -330,6 +383,71 @@ p {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.social-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.social-login-divider::before,
+.social-login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-color: var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+.google-login-button:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.kakao-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-color: #fee500;
+  background: #fee500;
+  color: #191919;
+}
+.kakao-login-button:hover:not(:disabled) {
+  border-color: #e5ce00;
+  background: #f5dc00;
+}
+.google-login-mark {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid #dadce0;
+  border-radius: 50%;
+  color: #4285f4;
+  background: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+.kakao-login-mark {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fee500;
+  background: #191919;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
 .card-footnote,
 .card-copy {
   color: var(--muted);
@@ -523,7 +641,6 @@ p {
   gap: 24px;
 }
 .account-column > .account-card { order: 1; }
-.account-column > .google-calendar-card { order: 2; }
 .account-column > .settings-card:not(.account-card):not(.deletion-card) { order: 3; }
 .account-column > .deletion-card { order: 4; }
 .account-card,
@@ -1508,6 +1625,20 @@ p {
 .settings-shortcuts h2 { margin: 0; color: var(--ink); font-size: 18px; line-height: 1.45; }
 .settings-shortcuts .button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; }
 .settings-shortcuts .button-icon { width: 18px; height: 18px; }
+.account-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  padding-top: 4px;
+  font-size: 12px;
+}
+.account-legal-links a {
+  color: var(--muted);
+}
+.account-legal-links a:hover {
+  color: var(--primary);
+}
 .announcement-list { display: grid; gap: 16px; max-width: 900px; }
 .announcement-card { gap: 10px; }
 .announcement-card h2, .announcement-card p { margin: 0; }
@@ -1515,3 +1646,15 @@ p {
 .announcement-card-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .announcement-card-heading time { color: var(--muted); font-size: 12px; white-space: nowrap; }
 @media (max-width: 700px) { .announcement-card-heading { display: grid; gap: 6px; } }
+@media (max-width: 640px) {
+  .legal-content {
+    width: min(100% - 32px, 760px);
+    padding: 40px 0 72px;
+  }
+  .legal-heading h1 {
+    font-size: 30px;
+  }
+  .legal-document {
+    padding: 24px 20px;
+  }
+}

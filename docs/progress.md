@@ -1419,3 +1419,36 @@
 - Added unverified-account cleanup endpoint configuration, service, migration, and tests.
 - Validation: frontend production build passed; frontend tests had 5 existing expectation failures; backend tests were blocked by missing httpx and cryptography dependencies.
 - Next: apply the new Supabase migration and configure the cleanup scheduler in the deployment environment.
+
+## 2026-11-10 · Cloudflare Pages 배포 정보 확인
+- 프론트엔드 위치, `frontend/package.json`, Vite 프로덕션 빌드 명령과 `frontend/dist` 결과물 폴더를 확인했다.
+- Cloudflare Pages 권장값과 프론트엔드 공개 환경변수 3개를 확인했다. 코드·API 주소·CORS·도메인은 변경하지 않았다.
+- 검증: `npm.cmd run build:frontend` 성공. PowerShell의 `npm.ps1` 실행 정책 오류는 `npm.cmd`로 우회했다.
+- Next: Cloudflare Pages에 배포 후 실제 도메인을 백엔드 CORS 허용 목록에 추가한다.
+### 2026-11-10
+
+- Google Calendar 연동 제거: 설정 UI, 캘린더 연결 버튼, 프론트 API, 백엔드 OAuth·동기화 API와 서비스, 관련 환경 변수·테스트를 삭제했다.
+- 항목 삭제와 회원 탈퇴에서 Google Calendar 정리 의존성을 제거하고 내부 캘린더·앱 알림만 유지하도록 변경했다.
+- 기존 원격 DB에 남아 있을 Phase 7 테이블을 제거하는 `20261110000000_remove_google_calendar.sql` 마이그레이션을 추가했다.
+- 검증: `npm.cmd run check`, `npm.cmd run build`, 백엔드 `pytest -q`는 통과했다. 프론트 전체 테스트는 기존 실패 5건이 남아 있다.
+## 2026-11-10 · Google 간편로그인
+
+- 로그인·회원가입 화면에 Supabase Auth Google OAuth 버튼과 오류·처리 중 상태를 추가했다.
+- OAuth 복귀 주소는 현재 프론트엔드 origin을 사용하며 기존 AuthContext 세션 감지 흐름으로 홈 진입을 이어간다.
+- PRD·spec·plan·README에 Google OAuth 설정, Redirect URL, 기존 이메일 로그인 유지 정책을 반영했다.
+- 검증: 프론트 타입 검사와 프로덕션 빌드는 통과했다. Google OAuth 호출 테스트는 통과했고, 기존 관리 폼 테스트 2건은 별도 실패로 남아 있다.
+- 다음 할 일: Google Cloud OAuth 클라이언트와 Supabase Google Provider 설정 후 실제 계정으로 성공·취소·실패 흐름을 확인한다.
+
+## 2026-11-10 · 공개 법적 고지 페이지
+
+- 설정의 로그아웃 영역에 개인정보처리방침과 서비스 이용약관 링크를 추가했다.
+- `/privacy`와 `/terms`를 로그인 없이 접근 가능한 공개 페이지로 구현해 Google OAuth 브랜딩 URL로 사용할 수 있게 했다.
+- 검증: 프론트 타입 검사·빌드와 공개 경로 렌더링 테스트를 확인한다.
+- 다음 할 일: 운영자 정보와 실제 개인정보 처리·약관 내용을 검토한 뒤 Google Branding에 두 URL을 등록한다.
+
+## 2026-11-10 · 카카오 간편로그인
+
+- 로그인·회원가입 화면에 Supabase Auth Kakao OAuth 버튼과 처리 중·오류 상태를 추가했다.
+- 카카오 callback URL, REST API 키, Client Secret, 동의항목 설정 방법을 README에 반영했다.
+- 검증: 카카오 OAuth 호출 테스트와 프론트 타입 검사·프로덕션 빌드를 진행한다.
+- 다음 할 일: 외부 콘솔 설정 후 실제 카카오 계정의 성공·취소·실패 흐름을 확인한다.

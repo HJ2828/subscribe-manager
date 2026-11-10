@@ -84,46 +84,6 @@ export function unregisterPushSubscription(token: string, endpoint: string) {
   return notificationRequest<{ status: "unregistered"; push_enabled: boolean }>(token, "/api/v1/push/unsubscribe", { endpoint });
 }
 
-export type GoogleCalendarStatus = {
-  configured: boolean;
-  status: "connected" | "reauth_required" | "sync_delayed" | "disconnected";
-  calendar_name: string;
-  selected_event_types: string[];
-  last_sync_at: string | null;
-  last_error: string | null;
-};
-
-async function googleCalendarRequest<T>(token: string, path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`${publicConfig.apiBaseUrl}/api/v1/google-calendar${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error?.message || "Google Calendar 요청을 처리하지 못했습니다.");
-  return payload as T;
-}
-
-export function getGoogleCalendarStatus(token: string) {
-  return googleCalendarRequest<GoogleCalendarStatus>(token, "/status");
-}
-
-export function startGoogleCalendarConnect(token: string) {
-  return googleCalendarRequest<{ authorization_url: string }>(token, "/connect", "POST");
-}
-
-export function syncGoogleCalendar(token: string) {
-  return googleCalendarRequest<{ created: number; updated: number; deleted: number; failed: number }>(token, "/sync", "POST");
-}
-
-export function updateGoogleCalendarEventTypes(token: string, eventTypes: string[]) {
-  return googleCalendarRequest<{ created: number; updated: number; deleted: number; failed: number }>(token, "/event-types", "PATCH", { event_types: eventTypes });
-}
-
-export function disconnectGoogleCalendar(token: string, deleteEvents: boolean) {
-  return googleCalendarRequest<{ status: "disconnected"; deleted: number; failed: number }>(token, "/disconnect", "POST", { delete_events: deleteEvents });
-}
-
 export type SupportStatus = "management_only" | "collecting" | "needs_information" | "verifying" | "supported" | "unsupported";
 export type ServiceNews = {
   id: string; catalog_id: string; service_name?: string; news_type: string; title: string; summary: string;
