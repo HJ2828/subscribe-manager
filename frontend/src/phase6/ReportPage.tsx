@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { todayInTimeZone } from "../home/homeModel";
@@ -78,6 +79,7 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
   const [view, setView] = useState<"bubble" | "chart" | "table">("bubble");
   const [showPeriodBreakdown, setShowPeriodBreakdown] = useState(false);
   const [showForeignBreakdown, setShowForeignBreakdown] = useState(false);
+  const [selectedPeriodMonth, setSelectedPeriodMonth] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [parentId, setParentId] = useState("");
   const [childId, setChildId] = useState("");
@@ -227,6 +229,7 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
   const periodTotal = periodPast + periodFuture;
   const periodHasKnownAmount = periodPoints.some((point) => point.count > 0);
   const periodMaximum = Math.max(1, ...periodPoints.map((point) => point.total));
+  const selectedPeriodPoint = periodPoints.find((point) => point.month === selectedPeriodMonth) || null;
   const linePoints = periodPoints.map((point, index) => {
     const x = periodPoints.length <= 1 ? 50 : (index / (periodPoints.length - 1)) * 100;
     const y = 92 - (point.total / periodMaximum) * 80;
@@ -323,7 +326,13 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
           <header><div><h2>{start} ~ {end} 금액 그래프</h2></div><div className="period-legend"><span><i className="past-color" />지난 예정액</span><span><i className="future-color" />미래 결제 예정액</span></div></header>
           <article className="monthly-line-card">
             <h3>월별 증감</h3>
-            {periodHasKnownAmount ? <div className="line-chart"><svg viewBox="0 0 100 100" role="img" aria-label={`${dailyView ? "일별" : "월별"} 예정 청구액 라인 차트`} preserveAspectRatio="none"><polyline points={linePoints} /></svg><div>{periodPoints.map((point) => <span key={point.month}><i style={{ height: `${Math.max(2, point.total / periodMaximum * 100)}%` }} /><small>{dailyView ? point.month.slice(5).replace("-", ".") : point.month.slice(2).replace("-", ".")}</small></span>)}</div></div> : <p className="report-empty">선택한 통화로 계산할 일정이 없어요.</p>}
+            {periodHasKnownAmount ? <>
+              <div className={`line-chart ${dailyView ? "daily" : "monthly"}`}>
+                <svg viewBox="0 0 100 100" role="img" aria-label={`${dailyView ? "일별" : "월별"} 예정 청구액 라인 차트`} preserveAspectRatio="none"><polyline points={linePoints} /></svg>
+                <div>{periodPoints.map((point) => <button type="button" className={point.month === selectedPeriodMonth ? "selected" : ""} key={point.month} onClick={() => setSelectedPeriodMonth(point.month)} aria-label={`${point.month} 상세 보기`}><i style={{ height: `${Math.max(2, point.total / periodMaximum * 100)}%` }} /><small>{dailyView ? point.month.slice(5).replace("-", ".") : point.month.slice(2).replace("-", ".")}</small></button>)}</div>
+              </div>
+              {selectedPeriodPoint ? <div className="period-point-detail"><strong>{selectedPeriodPoint.month} 상세</strong><dl><div><dt>지난 예정액</dt><dd>{money(selectedPeriodPoint.past, currency)}</dd></div><div><dt>미래 예정액</dt><dd>{money(selectedPeriodPoint.future, currency)}</dd></div><div><dt>전체</dt><dd>{money(selectedPeriodPoint.total, currency)}</dd></div><div><dt>일정</dt><dd>{selectedPeriodPoint.count}건</dd></div></dl></div> : null}
+            </> : <p className="report-empty">선택한 통화로 계산할 일정이 없어요.</p>}
           </article>
           <div className="period-comparison-grid">
             <article className="period-amount-card"><h3>선택 기간 전체 청구액</h3><strong>{periodHasKnownAmount ? money(periodTotal, currency) : "계산할 정보 없음"}</strong><div className="stacked-bar" aria-label={`지난 예정액 ${money(periodPast, currency)}, 미래 결제 예정액 ${money(periodFuture, currency)}`}><i className="past-color" style={{ width: periodTotal ? `${periodPast / periodTotal * 100}%` : "0%" }} /><i className="future-color" style={{ width: periodTotal ? `${periodFuture / periodTotal * 100}%` : "0%" }} /></div><p><span>지난 예정액 <b>{money(periodPast, currency)}</b></span><span>미래 예정액 <b>{money(periodFuture, currency)}</b></span></p><button type="button" className="breakdown-toggle" aria-expanded={showPeriodBreakdown} onClick={() => setShowPeriodBreakdown((current) => !current)}>{showPeriodBreakdown ? "상세 내역 닫기" : "상세 내역 보기"}</button>{showPeriodBreakdown ? <table><thead><tr><th>{dailyView ? "일" : "월"}</th><th>지난 예정액</th><th>미래 예정액</th><th>전체</th></tr></thead><tbody>{periodPoints.map((point) => <tr key={point.month}><td>{point.month}</td><td>{money(point.past, currency)}</td><td>{money(point.future, currency)}</td><td>{money(point.total, currency)}</td></tr>)}</tbody></table> : null}</article>
@@ -331,7 +340,7 @@ export function ReportPage({ navigation }: { navigation: ReactNode }) {
           </div>
           <article className="period-amount-card foreign-amount-card"><h3>선택 기간 전체 청구액(외화)</h3>{foreignCurrencyRows.length ? <>{foreignCurrencyRows.map((row) => <div className="foreign-currency-row" key={row.code}><strong>{row.code} {new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(row.past + row.future)}</strong><span>지난 예정액 {row.past.toLocaleString("ko-KR")} · 미래 예정액 {row.future.toLocaleString("ko-KR")}</span></div>)}<button type="button" className="breakdown-toggle" aria-expanded={showForeignBreakdown} onClick={() => setShowForeignBreakdown((current) => !current)}>{showForeignBreakdown ? "상세 내역 닫기" : "상세 내역 보기"}</button>{showForeignBreakdown ? <table><thead><tr><th>통화</th><th>지난 예정액</th><th>미래 예정액</th><th>전체</th></tr></thead><tbody>{foreignCurrencyRows.map((row) => <tr key={row.code}><td>{row.code}</td><td>{row.past.toLocaleString("ko-KR")}</td><td>{row.future.toLocaleString("ko-KR")}</td><td>{(row.past + row.future).toLocaleString("ko-KR")}</td></tr>)}</tbody></table> : null}</> : null}</article>
           {foreignCard}
-          {showForeignBreakdown ? <div className="foreign-breakdown-modal" role="dialog" aria-modal="true" aria-label="외화 청구액 상세 내역" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowForeignBreakdown(false); }}><div className="foreign-breakdown-dialog"><header><h3>외화 청구액 상세 내역</h3><button type="button" onClick={() => setShowForeignBreakdown(false)} aria-label="상세 내역 닫기">×</button></header><div className="foreign-breakdown-scroll"><table><thead><tr><th>{dailyView ? "일" : "월"}</th><th>통화</th><th>지난 예정액</th><th>미래 예정액</th><th>전체</th></tr></thead><tbody>{foreignPeriodRows.map((point) => <tr key={`modal:${point.code}:${point.month}`}><td>{point.month}</td><td>{point.code}</td><td>{point.past.toLocaleString("ko-KR")}</td><td>{point.future.toLocaleString("ko-KR")}</td><td>{point.total.toLocaleString("ko-KR")}</td></tr>)}</tbody></table></div></div></div> : null}
+          {showForeignBreakdown ? createPortal(<div className="foreign-breakdown-modal" role="dialog" aria-modal="true" aria-label="외화 청구액 상세 내역" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowForeignBreakdown(false); }}><div className="foreign-breakdown-dialog"><header><h3>외화 청구액 상세 내역</h3><button type="button" onClick={() => setShowForeignBreakdown(false)} aria-label="상세 내역 닫기">×</button></header><div className="foreign-breakdown-scroll"><table><thead><tr><th>{dailyView ? "일" : "월"}</th><th>통화</th><th>지난 예정액</th><th>미래 예정액</th><th>전체</th></tr></thead><tbody>{foreignPeriodRows.map((point) => <tr key={`modal:${point.code}:${point.month}`}><td>{point.month}</td><td>{point.code}</td><td>{point.past.toLocaleString("ko-KR")}</td><td>{point.future.toLocaleString("ko-KR")}</td><td>{point.total.toLocaleString("ko-KR")}</td></tr>)}</tbody></table></div></div></div>, document.body) : null}
           <small className="past-disclaimer">리포트 결과는 등록된 금액 기준으로 작성되었으며, 실제 금액과 다를 수 있습니다.</small>
         </section>
 

@@ -204,6 +204,13 @@ export function Phase4ImagePage({ navigation }: { navigation: ReactNode }) {
   async function ensureAsset() {
     if (assetId) return assetId;
     if (!client || !session || !file) throw new Error("이미지를 선택해 주세요.");
+    const capacity = await client.rpc("assert_my_storage_capacity", { p_size_bytes: file.size });
+    if (capacity.error) {
+      if (capacity.error.message.includes("storage_quota_exceeded")) {
+        throw new Error("저장 공간이 부족해요. 이미지 보관함에서 파일을 정리해 주세요.");
+      }
+      throw capacity.error;
+    }
     const path = `${session.user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const uploaded = await client.storage
       .from("user-images")
@@ -221,7 +228,10 @@ export function Phase4ImagePage({ navigation }: { navigation: ReactNode }) {
       })
       .select("id")
       .single();
-    if (inserted.error || !inserted.data) throw inserted.error;
+    if (inserted.error || !inserted.data) {
+      await client.storage.from("user-images").remove([path]);
+      throw inserted.error || new Error("이미지 정보를 저장하지 못했어요.");
+    }
     setAssetId(inserted.data.id);
     return inserted.data.id as string;
   }
@@ -430,6 +440,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
   const [busyId, setBusyId] = useState("");
   const [notice, setNotice] = useState<Notice>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedAsset, setSelectedAsset] = useState<ImageAssetRow | null>(null);
 
   useEffect(() => {
     if (!client || !session) return;
@@ -584,7 +595,14 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
               <article className="phase4-card image-asset-card" key={asset.id}>
                 <div className="image-asset-preview">
                   {asset.signed_url ? (
-                    <img src={asset.signed_url} alt="보관된 원본 이미지" />
+                    <button
+                      type="button"
+                      className="image-asset-preview-button"
+                      aria-label="보관된 원본 이미지 크게 보기"
+                      onClick={() => setSelectedAsset(asset)}
+                    >
+                      <img src={asset.signed_url} alt="보관된 원본 이미지" />
+                    </button>
                   ) : (
                     <span>미리보기를 불러올 수 없어요.</span>
                   )}
@@ -601,6 +619,11 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                   )}
                 </div>
                 <div className="image-asset-actions">
+                  {asset.signed_url ? (
+                    <a className="button secondary" href={asset.signed_url} download={`image-${asset.id}`}>
+                      이미지 다운로드
+                    </a>
+                  ) : null}
                   {asset.item_id ? (
                     <Link to={`/items/${asset.item_id}`} className="button secondary">
                       연결 항목 보기
@@ -658,6 +681,23 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
             </p>
           </section>
         )}
+        {selectedAsset?.signed_url ? (
+          <div className="image-lightbox-backdrop" role="presentation" onClick={() => setSelectedAsset(null)}>
+            <section
+              className="image-lightbox"
+              role="dialog"
+              aria-modal="true"
+              aria-label="이미지 미리보기"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button type="button" className="image-lightbox-close" aria-label="이미지 미리보기 닫기" onClick={() => setSelectedAsset(null)}>×</button>
+              <img src={selectedAsset.signed_url} alt="보관된 원본 이미지 크게 보기" />
+              <a className="button primary" href={selectedAsset.signed_url} download={`image-${selectedAsset.id}`}>
+                이미지 다운로드
+              </a>
+            </section>
+          </div>
+        ) : null}
       </main>
     </div>
   );

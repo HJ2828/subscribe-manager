@@ -35,11 +35,11 @@
 .sidebar-nav a.active .nav-icon, .sidebar-notification.active .nav-icon { background: var(--primary-soft); }
 .sidebar-footer { display: grid; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); }
 .sidebar-notification b { min-width: 22px; padding: 2px 6px; border-radius: 999px; color: #fff; background: var(--secondary); font-size: 10px; text-align: center; }
-.sidebar-account { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px; }
-.sidebar-account > span { flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #23492c; background: var(--alien); font-weight: 800; }
-.sidebar-account div { min-width: 0; display: grid; }
-.sidebar-account strong { font-size: 12px; }
-.sidebar-account small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-account, .account-identity { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px; }
+.sidebar-account > span, .account-identity > span { flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #23492c; background: var(--alien); font-weight: 800; }
+.sidebar-account div, .account-identity div { min-width: 0; display: grid; }
+.sidebar-account strong, .account-identity strong { font-size: 12px; }
+.sidebar-account small, .account-identity small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-app-header { display: none; }
 .brand-mark { overflow: hidden; }
 .brand-mark::before, .brand-mark::after, .brand-mark > span::before, .brand-mark > span::after { display: none; }

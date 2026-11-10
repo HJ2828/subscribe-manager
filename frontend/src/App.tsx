@@ -40,6 +40,7 @@ import "./layout-redesign.css";
 import "./glass-unified.css";
 
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
+const MAX_STORAGE_BYTES = 250 * 1024 * 1024;
 type Profile = {
   country_code: string;
   default_currency: string;
@@ -48,6 +49,19 @@ type Profile = {
   notification_time: string;
   in_app_notifications_enabled: boolean;
 };
+
+function loginMethodLabel(provider: string | undefined) {
+  if (provider === "google") return "Google 로그인";
+  if (provider === "kakao") return "카카오 로그인";
+  return "이메일 로그인";
+}
+
+function accountDisplayName(userMetadata: Record<string, unknown> | undefined) {
+  const candidate = [userMetadata?.full_name, userMetadata?.name].find(
+    (value): value is string => typeof value === "string" && value.trim().length > 0,
+  );
+  return candidate?.trim() || "내 계정";
+}
 
 type SubscriptionItem = {
   id: string;
@@ -882,8 +896,11 @@ const navItems = [
   ["설정", navSettingsIcon, "/settings"],
 ] as const;
 
-function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "reports" | "settings" | "notifications" | "news" | "scraps" | "operations" }) {
+function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "reports" | "settings" | "notifications" | "news" | "scraps" | "operations" | "none" }) {
   const { client, session } = useAuth();
+  const accountEmail = session?.user.email || "이메일 확인 필요";
+  const accountInitial = accountEmail.slice(0, 1).toUpperCase() || "D";
+  const accountName = accountDisplayName(session?.user.user_metadata);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(
     () => window.localStorage.getItem("dalli-sidebar") !== "closed",
@@ -939,8 +956,8 @@ function AppNavigation({ active }: { active: "home" | "items" | "calendar" | "re
             {unreadCount ? <b>{unreadCount > 99 ? "99+" : unreadCount}</b> : null}
           </AppLink>
           <div className="sidebar-account">
-            <span aria-hidden="true">{session?.user.email?.slice(0, 1).toUpperCase() || "D"}</span>
-            <div><strong>내 계정</strong><small>{session?.user.email}</small></div>
+            <span aria-hidden="true">{accountInitial}</span>
+            <div><strong>{accountName}</strong><small>{accountEmail}</small></div>
           </div>
         </div>
       </aside>
@@ -1712,18 +1729,30 @@ function SubscriptionDetailPage({ itemId }: { itemId: string }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [appNotificationsEnabled, setAppNotificationsEnabled] = useState(true);
   useEffect(() => {
     if (!client || !session) return;
-    client
-      .from("items")
-      .select("*")
-      .eq("id", itemId)
-      .eq("user_id", session.user.id)
-      .single()
-      .then(({ data, error }) => {
+    Promise.all([
+      client
+        .from("items")
+        .select("*")
+        .eq("id", itemId)
+        .eq("user_id", session.user.id)
+        .single(),
+      client
+        .from("profiles")
+        .select("in_app_notifications_enabled")
+        .eq("id", session.user.id)
+        .single(),
+    ]).then(([itemResult, profileResult]) => {
+        const { data, error } = itemResult;
         if (error || !data)
           setNotice({ tone: "error", text: "이 항목을 찾을 수 없어요." });
         else setItem(data as SubscriptionItem);
+        if (profileResult.data)
+          setAppNotificationsEnabled(
+            profileResult.data.in_app_notifications_enabled !== false,
+          );
         setLoading(false);
       });
   }, [client, itemId, session]);
@@ -1920,21 +1949,28 @@ function SubscriptionDetailPage({ itemId }: { itemId: string }) {
             </section>
           </section>
           <aside className="detail-side">
-            <section className="detail-card">
-              <h2>알림</h2>
-              <dl>
-                <div>
-                  <dt>기본 알림</dt>
-                  <dd>
-                    {(item.reminder_days_before || [3, 0]).join("일 전 + ")}일{" "}
-                    {item.reminder_time}
-                  </dd>
+            <section className="detail-card detail-notification-card">
+              <div className="detail-notification-header">
+                <h2>알림</h2>
+                <label className="toggle-row detail-notification-toggle">
+                  <input type="checkbox" aria-label="앱 알림" checked={appNotificationsEnabled} readOnly disabled />
+                  <span className="toggle" />
+                </label>
+              </div>
+              {appNotificationsEnabled ? (
+                <div className="detail-notification-summary">
+                  <div>
+                    <span>알림 발송</span>
+                    <strong>{(item.reminder_days_before || [3, 0]).map((day) => day === 0 ? "당일" : `${day}일 전`).join(" · ")}</strong>
+                  </div>
+                  <div>
+                    <span>발송 시간</span>
+                    <strong>{item.reminder_time}</strong>
+                  </div>
                 </div>
-              </dl>
-              <p className="detail-muted">
-                {Intl.DateTimeFormat().resolvedOptions().timeZone} · 앱 내 기록
-                유지 · 미래·미발송 알림만 변경
-              </p>
+              ) : (
+                <p className="detail-notification-disabled">설정에서 알림을 켜주세요</p>
+              )}
             </section>
             <section className="detail-card screenshot-placeholder">
               <h2>보관 스크린샷</h2>
@@ -1990,14 +2026,71 @@ function AnnouncementsPage() {
     <div className="app-shell settings-shell">
       <AppNavigation active="settings" />
       <main className="settings-page announcements-page">
-        <PageHeader eyebrow="공지사항" title="공지사항" description="서비스 운영과 이용에 필요한 안내를 확인하세요." actions={<span className="page-header-context">전체 사용자</span>} />
+        <PageHeader eyebrow="공지사항" title="공지사항" description="서비스 운영과 이용에 필요한 안내를 확인하세요." />
         {loading ? <div className="phase8-empty">공지사항을 불러오는 중…</div> : rows.length ? <section className="announcement-list">{rows.map((row) => <article className="settings-card announcement-card" key={row.id}><div className="announcement-card-heading"><h2>{row.title}</h2><time>{row.published_at?.slice(0, 10) || row.created_at.slice(0, 10)}</time></div><p>{row.body}</p></article>)}</section> : <div className="phase8-empty"><strong>등록된 공지사항이 없습니다.</strong><p>새로운 운영 안내가 등록되면 여기에 표시됩니다.</p></div>}
       </main>
     </div>
   );
 }
 
-function SettingsPage() {
+type SettingsSection = "defaults" | "account" | "operator";
+
+function SettingsOverviewPage() {
+  const { session } = useAuth();
+  const [isOperator, setIsOperator] = useState(false);
+  const accountEmail = session?.user.email || "이메일 확인 필요";
+  const accountInitial = accountEmail.slice(0, 1).toUpperCase() || "D";
+  const accountName = accountDisplayName(session?.user.user_metadata);
+
+  useEffect(() => {
+    if (!session) return;
+    getOperatorStatus(session.access_token)
+      .then((result) => setIsOperator(result.is_operator))
+      .catch(() => setIsOperator(false));
+  }, [session]);
+
+  return (
+    <div className="app-shell settings-shell">
+      <AppNavigation active="settings" />
+      <main className="settings-page">
+        <PageHeader eyebrow="설정" title="설정" description="계정과 서비스 환경을 관리하세요." />
+        <section className="settings-subpage-grid" aria-label="설정 메뉴">
+          <AppLink to="/settings/account" className="settings-section-link settings-account-link">
+            <div className="settings-account-summary">
+              <span className="settings-profile-avatar" aria-hidden="true">{accountInitial}</span>
+              <span className="settings-account-copy">
+                <strong>{accountName}</strong>
+                <span>{accountEmail}</span>
+              </span>
+            </div>
+            <span className="settings-link-arrow" aria-hidden="true">›</span>
+          </AppLink>
+          <section className="settings-card settings-section-link settings-shortcuts settings-shortcuts-link">
+            <h2>바로가기</h2>
+            <div className="settings-shortcuts-grid">
+              <AppLink to="/images" className="button secondary"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리<span className="settings-shortcut-arrow" aria-hidden="true">›</span></AppLink>
+              <AppLink to="/scraps" className="button secondary"><img className="button-icon" src={bookmarkIcon} alt="" />스크랩 보관함<span className="settings-shortcut-arrow" aria-hidden="true">›</span></AppLink>
+              <AppLink to="/announcements" className="button secondary"><img className="button-icon" src={notificationIcon} alt="" />공지사항<span className="settings-shortcut-arrow" aria-hidden="true">›</span></AppLink>
+            </div>
+          </section>
+          <AppLink to="/settings/defaults" className="settings-section-link settings-defaults-link">
+            <strong>기본값 설정</strong>
+            <span className="settings-link-arrow" aria-hidden="true">›</span>
+          </AppLink>
+          {isOperator ? (
+            <AppLink to="/settings/operator" className="settings-section-link">
+              <strong>운영자 도구</strong>
+              <span>공지사항 작성과 소식 검토</span>
+              <span className="settings-link-arrow" aria-hidden="true">›</span>
+            </AppLink>
+          ) : null}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function SettingsPage({ section }: { section: SettingsSection }) {
   const { client, session } = useAuth();
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [storageBytes, setStorageBytes] = useState(0);
@@ -2006,12 +2099,14 @@ function SettingsPage() {
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [isOperator, setIsOperator] = useState(false);
+  const [operatorLoading, setOperatorLoading] = useState(section === "operator");
 
   useEffect(() => {
     if (!session) return;
     getOperatorStatus(session.access_token)
       .then((result) => setIsOperator(result.is_operator))
-      .catch(() => setIsOperator(false));
+      .catch(() => setIsOperator(false))
+      .finally(() => setOperatorLoading(false));
   }, [session]);
 
   useEffect(() => {
@@ -2088,16 +2183,41 @@ function SettingsPage() {
     go("/login", true);
   }
 
-  if (loading) return <LoadingScreen label="설정 불러오는 중" />;
+  if (loading || (section === "operator" && operatorLoading)) return <LoadingScreen label="설정 불러오는 중" />;
+  if (section === "operator" && !isOperator) {
+    return (
+      <div className="app-shell settings-shell">
+        <AppNavigation active="settings" />
+        <main className="settings-page">
+          <PageHeader eyebrow="설정" title="운영자 도구" description="운영자 계정에서만 사용할 수 있어요." actions={<AppLink to="/settings" className="button secondary">설정으로</AppLink>} />
+          <div className="phase8-empty"><strong>접근할 수 없는 메뉴예요.</strong><p>운영자 권한이 있는 계정으로 로그인해 주세요.</p></div>
+        </main>
+      </div>
+    );
+  }
   const storageMb = storageBytes / 1024 / 1024;
+  const remainingStorageMb = Math.max(0, (MAX_STORAGE_BYTES - storageBytes) / 1024 / 1024);
+  const accountEmail = session?.user.email || "이메일 확인 필요";
+  const accountName = accountDisplayName(session?.user.user_metadata);
+  const accountProvider = session?.user.identities?.find(
+    (identity) => identity.provider !== "email",
+  )?.provider || session?.user.app_metadata?.provider;
+  const hasEmailPasswordIdentity = Boolean(
+    session?.user.identities?.some((identity) => identity.provider === "email"),
+  );
   return (
     <div className="app-shell settings-shell">
       <AppNavigation active="settings" />
       <main className="settings-page">
-        <PageHeader eyebrow="설정" title="사용자 기본 설정" description="계정과 알림 환경을 관리하세요." actions={<span className="page-header-context">내 계정</span>} />
+        <PageHeader
+          eyebrow="설정"
+          title={section === "defaults" ? "기본값 설정" : section === "account" ? "계정" : "운영자 도구"}
+          description={section === "defaults" ? "새 항목에 적용할 기본값과 알림을 관리하세요." : section === "account" ? "로그인 계정과 이용 종료를 관리하세요." : "서비스 운영과 소식을 관리하세요."}
+          actions={<AppLink to="/settings" className="button secondary">설정으로</AppLink>}
+        />
         <NoticeBox notice={notice} />
-        <form onSubmit={save} className="settings-layout">
-          <section className="settings-card settings-primary">
+        <form onSubmit={save} className={`settings-layout settings-layout-${section}`}>
+          {section === "defaults" ? <section className="settings-card settings-primary">
             <div className="section-header">
               <h2>기본값</h2>
               <p>현재 적용 가능한 설정이에요.</p>
@@ -2160,6 +2280,7 @@ function SettingsPage() {
                 <button
                   type="button"
                   className="choice-chip"
+                  disabled={!profile.in_app_notifications_enabled}
                   aria-pressed={profile.notification_days_before.includes(7)}
                   onClick={() => toggleDay(7)}
                 >
@@ -2168,6 +2289,7 @@ function SettingsPage() {
                 <button
                   type="button"
                   className="choice-chip"
+                  disabled={!profile.in_app_notifications_enabled}
                   aria-pressed={profile.notification_days_before.includes(3)}
                   onClick={() => toggleDay(3)}
                 >
@@ -2176,6 +2298,7 @@ function SettingsPage() {
                 <button
                   type="button"
                   className="choice-chip"
+                  disabled={!profile.in_app_notifications_enabled}
                   aria-pressed={profile.notification_days_before.includes(1)}
                   onClick={() => toggleDay(1)}
                 >
@@ -2184,6 +2307,7 @@ function SettingsPage() {
                 <button
                   type="button"
                   className="choice-chip"
+                  disabled={!profile.in_app_notifications_enabled}
                   aria-pressed={profile.notification_days_before.includes(0)}
                   onClick={() => toggleDay(0)}
                 >
@@ -2195,6 +2319,7 @@ function SettingsPage() {
                   <input
                     id="notification-time"
                     type="time"
+                    disabled={!profile.in_app_notifications_enabled}
                     value={profile.notification_time}
                     onChange={(event) =>
                       setProfile({
@@ -2240,39 +2365,40 @@ function SettingsPage() {
                 "설정 저장"
               )}
             </button>
-          </section>
-          <aside className="account-column">
-            <section className="settings-card settings-shortcuts">
-              <h2>바로가기</h2>
-              <AppLink to="/images" className="button secondary full"><img className="button-icon" src={galleryIcon} alt="" />이미지 관리</AppLink>
-              <AppLink to="/scraps" className="button secondary full"><img className="button-icon" src={bookmarkIcon} alt="" />스크랩 보관함</AppLink>
-              <AppLink to="/announcements" className="button secondary full"><img className="button-icon" src={notificationIcon} alt="" />공지사항</AppLink>
-            </section>
-            {isOperator ? (
+          </section> : null}
+          {section !== "defaults" ? <aside className="account-column">
+            {section === "operator" && isOperator ? (
               <section className="settings-card">
                 <h2>운영자 도구</h2>
-                <p>자동 수집 결과 중 확인이 필요한 소식을 검토하거나 전체 사용자 공지사항을 작성해요.</p>
+                <p>자동 수집 결과 중 확인이 필요한 소식을 검토하거나 공지사항을 작성해요.</p>
                 <AppLink to="/operations#announcements" className="button primary full">공지사항 작성</AppLink>
                 <AppLink to="/operations" className="button secondary full">소식 검토 열기</AppLink>
               </section>
             ) : null}
+            {section === "account" ? <>
             <section className="settings-card account-card">
               <h2>계정</h2>
-              <Field id="account-email" label="이메일 · 읽기 전용">
-                <div id="account-email" className="readonly-value">
-                  {session?.user.email}
+              <div className="account-identity">
+                <span aria-hidden="true">{accountEmail.slice(0, 1).toUpperCase()}</span>
+                <div><strong>{accountName}</strong><small>{accountEmail}</small></div>
+              </div>
+              <Field id="account-provider" label="로그인 방식">
+                <div id="account-provider" className="readonly-value">
+                  {loginMethodLabel(accountProvider)}
                 </div>
               </Field>
-              <InfoPanel title="이메일 확인 완료" />
               <div className="storage-summary">
                 <span>저장 공간</span>
-                <strong>
-                  {storageMb.toFixed(storageMb > 0 ? 1 : 0)}MB / 100MB
-                </strong>
+                <span className="storage-value">
+                  <strong>{storageMb.toFixed(storageMb > 0 ? 1 : 0)}MB / 250MB</strong>
+                  <small> (남은 용량 {remainingStorageMb.toFixed(1)}MB)</small>
+                </span>
               </div>
-              <AppLink to="/forgot-password" className="button secondary full">
-                비밀번호 변경
-              </AppLink>
+              {hasEmailPasswordIdentity ? (
+                <AppLink to="/forgot-password" className="button secondary full">
+                  비밀번호 변경
+                </AppLink>
+              ) : null}
               <button
                 className="button secondary full"
                 type="button"
@@ -2299,7 +2425,8 @@ function SettingsPage() {
                 탈퇴 안내 및 최종 확인
               </AppLink>
             </section>
-          </aside>
+            </> : null}
+          </aside> : null}
         </form>
       </main>
     </div>
@@ -2434,7 +2561,7 @@ export default function App() {
   if (path === "/images")
     return (
       <Protected>
-        <Phase4ImageLibraryPage navigation={<AppNavigation active="items" />} />
+        <Phase4ImageLibraryPage navigation={<AppNavigation active="none" />} />
       </Protected>
     );
   if (path === "/items/new")
@@ -2506,7 +2633,19 @@ export default function App() {
   if (path === "/settings")
     return (
       <Protected>
-        <SettingsPage />
+        <SettingsOverviewPage />
+      </Protected>
+    );
+  if (path === "/settings/operator")
+    return (
+      <Protected>
+        <OperationsPage navigation={<AppNavigation active="operations" />} />
+      </Protected>
+    );
+  if (path === "/settings/defaults" || path === "/settings/account")
+    return (
+      <Protected>
+        <SettingsPage section={path.split("/")[2] as SettingsSection} />
       </Protected>
     );
   if (path === "/announcements")

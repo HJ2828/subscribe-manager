@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { searchBrands } from "../lib/api";
@@ -71,6 +72,8 @@ type ItemImage = {
   created_at: string;
   signed_url: string | null;
 };
+
+const MAX_ITEM_IMAGES = 3;
 
 function saveErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
@@ -520,8 +523,8 @@ export function Phase3ListPage({ navigation }: PageProps) {
                       <small>{typeLabel(item.management_type, true)} · {item.category || "카테고리 미정"}</small>
                     </span>
                   </span>
-                  <span className="item-row-end">
-                    <strong>{formatAmount(item)}</strong>
+                  <span className={`item-row-end${item.management_type === "other_deadline" ? " item-row-end-empty" : ""}`}>
+                    {item.management_type === "other_deadline" ? null : <strong>{formatAmount(item)}</strong>}
                     <span className="item-row-arrow" aria-hidden="true">›</span>
                   </span>
                   <span className="item-row-date">{itemDate(item)}</span>
@@ -1568,6 +1571,12 @@ export function Phase3FormPage({
       setImagePreview("");
       return;
     }
+    if (editing && attachedImages.length >= MAX_ITEM_IMAGES) {
+      setImageFile(null);
+      setImagePreview("");
+      setNotice({ tone: "error", text: `세부 항목 하나에는 이미지를 최대 ${MAX_ITEM_IMAGES}개까지 보관할 수 있어요.` });
+      return;
+    }
     if (
       !/^(image\/jpeg|image\/png|image\/webp)$/.test(next.type) ||
       next.size > 10 * 1024 * 1024
@@ -1593,6 +1602,28 @@ export function Phase3FormPage({
   async function ensureImageAsset() {
     if (assetId) return assetId;
     if (!client || !session || !imageFile) throw new Error("이미지를 선택해 주세요.");
+    const capacity = await client.rpc("assert_my_storage_capacity", { p_size_bytes: imageFile.size });
+    if (capacity.error) {
+      if (capacity.error.message.includes("storage_quota_exceeded")) {
+        throw new Error("저장 공간이 부족해요. 이미지 보관함에서 파일을 정리해 주세요.");
+      }
+      throw capacity.error;
+    }
+    if (editing && itemId) {
+      const existing = await client
+        .from("image_assets")
+        .select("id")
+        .eq("item_id", itemId)
+        .eq("user_id", session.user.id)
+        .eq("lifecycle_status", "active")
+        .eq("original_status", "kept");
+      if (existing.error) throw existing.error;
+      const pendingIds = pendingImageDeletes;
+      const remainingCount = (existing.data || []).filter((image) => !pendingIds.has(image.id)).length;
+      if (remainingCount >= MAX_ITEM_IMAGES) {
+        throw new Error(`세부 항목 하나에는 이미지를 최대 ${MAX_ITEM_IMAGES}개까지 보관할 수 있어요.`);
+      }
+    }
     const path = `${session.user.id}/${crypto.randomUUID()}-${imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const uploaded = await client.storage
       .from("user-images")
@@ -1610,7 +1641,10 @@ export function Phase3FormPage({
       })
       .select("id")
       .single();
-    if (inserted.error || !inserted.data) throw inserted.error;
+    if (inserted.error || !inserted.data) {
+      await client.storage.from("user-images").remove([path]);
+      throw inserted.error || new Error("이미지 정보를 저장하지 못했어요.");
+    }
     setAssetId(inserted.data.id);
     return inserted.data.id as string;
   }
@@ -1827,7 +1861,7 @@ export function Phase3FormPage({
                 <div className="integrated-image-panel">
                   {editing && attachedImages.length ? (
                     <div className="attached-image-section">
-                      <strong>현재 보관 중인 이미지</strong>
+                      <strong>현재 보관 중인 이미지 ({attachedImages.length}/{MAX_ITEM_IMAGES})</strong>
                       <div className="detail-image-grid">
                         {attachedImages.map((image) => (
                           <div key={image.id} className="image-preview-wrap">
@@ -1844,18 +1878,22 @@ export function Phase3FormPage({
                       </div>
                     </div>
                   ) : null}
-                  <label className="upload-box compact-upload-box">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(event) => chooseImage(event.target.files?.[0] || null)}
-                    />
-                    {imagePreview ? (
-                      <div className="image-preview-wrap selected-image-preview"><img src={imagePreview} alt="선택한 원본 미리보기" /><button type="button" className="image-remove-button" aria-label="이미지 삭제" onClick={() => chooseImage(null)}>×</button></div>
-                    ) : (
-                      <span>JPEG, PNG, WebP 이미지 선택<br />최대 10MB</span>
-                    )}
-                  </label>
+                  {(!editing || attachedImages.length < MAX_ITEM_IMAGES) ? (
+                    <label className="upload-box compact-upload-box">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => chooseImage(event.target.files?.[0] || null)}
+                      />
+                      {imagePreview ? (
+                        <div className="image-preview-wrap selected-image-preview"><img src={imagePreview} alt="선택한 원본 미리보기" /><button type="button" className="image-remove-button" aria-label="이미지 삭제" onClick={() => chooseImage(null)}>×</button></div>
+                      ) : (
+                        <span>JPEG, PNG, WebP 이미지 선택<br />최대 10MB</span>
+                      )}
+                    </label>
+                  ) : (
+                    <p className="image-limit-notice">이미지는 세부 항목당 최대 {MAX_ITEM_IMAGES}개까지 보관할 수 있어요. 기존 이미지를 삭제하면 추가할 수 있어요.</p>
+                  )}
                   <label className="check">
                     <input
                       type="checkbox"
@@ -1927,6 +1965,7 @@ export function Phase3DetailPage({
   const [item, setItem] = useState<ManagedItem | null>(null);
   const [images, setImages] = useState<ItemImage[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<ItemImage | null>(null);
   const [imagesLoading, setImagesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
@@ -1940,6 +1979,7 @@ export function Phase3DetailPage({
   const [editingUsageHistory, setEditingUsageHistory] = useState(false);
   const [receiptSaving, setReceiptSaving] = useState(false);
   const [timezone, setTimezone] = useState("Asia/Seoul");
+  const [appNotificationsEnabled, setAppNotificationsEnabled] = useState(true);
   const [showUsageDetails, setShowUsageDetails] = useState(false);
   const [relationships, setRelationships] = useState<Array<{
     id: string;
@@ -1973,6 +2013,18 @@ export function Phase3DetailPage({
         setLoading(false);
       });
   }, [client, itemId, session]);
+
+  useEffect(() => {
+    if (!client || !session) return;
+    client
+      .from("profiles")
+      .select("in_app_notifications_enabled")
+      .eq("id", session.user.id)
+      .single()
+      .then(({ data }) => {
+        setAppNotificationsEnabled(data?.in_app_notifications_enabled !== false);
+      });
+  }, [client, session]);
 
   useEffect(() => {
     if (!client || !session || !item) return;
@@ -2367,7 +2419,8 @@ export function Phase3DetailPage({
   const targetPrecision =
     item.target_date_precision || (item.next_billing_date ? "day" : null);
   const reminderDays = item.reminder_days_before || [];
-  const reminderEnabled = Boolean(target && reminderDays.length);
+  const itemReminderEnabled = Boolean(target && reminderDays.length);
+  const reminderEnabled = appNotificationsEnabled && itemReminderEnabled;
   const reminderDispatch = reminderDays
     .map((day) => (day === 0 ? "당일" : `${day}일 전`))
     .join(" · ");
@@ -2447,14 +2500,16 @@ export function Phase3DetailPage({
                   <dt>{isPaymentScheduleType(item.management_type) ? "다음 결제일" : "만료일"}</dt>
                   <dd>{target ? displayDate(target, targetPrecision) : "날짜 확인 필요"}</dd>
                 </div>
-                <div>
-                  <dt>
-                    {item.management_type === "points"
-                      ? "포인트·단위"
-                      : "금액·실제 통화"}
-                  </dt>
-                  <dd>{formatAmount(item)}</dd>
-                </div>
+                {item.management_type !== "other_deadline" ? (
+                  <div>
+                    <dt>
+                      {item.management_type === "points"
+                        ? "포인트·단위"
+                        : "금액·실제 통화"}
+                    </dt>
+                    <dd>{formatAmount(item)}</dd>
+                  </div>
+                ) : null}
                 {item.provider_name ? (
                   <div>
                     <dt>
@@ -2588,14 +2643,14 @@ export function Phase3DetailPage({
                   className="detail-reminder-toggle"
                   role="switch"
                   aria-checked={reminderEnabled}
-                  aria-label={reminderEnabled ? "알림 끄기" : "알림 켜기"}
-                  disabled={!target || reminderSaving}
+                  aria-label={reminderEnabled ? "알림 끄기" : appNotificationsEnabled ? "알림 켜기" : "설정에서 알림 켜기"}
+                  disabled={!appNotificationsEnabled || !target || reminderSaving}
                   onClick={toggleReminder}
                 >
                   <span aria-hidden="true" />
                 </button>
               </div>
-              <div className="detail-reminder-values">
+              {appNotificationsEnabled ? <div className="detail-reminder-values">
                 <div>
                   <span>알림 발송</span>
                   <strong>{target ? (reminderEnabled ? reminderDispatch : "알림 없음") : "날짜 미확인"}</strong>
@@ -2604,7 +2659,7 @@ export function Phase3DetailPage({
                   <span>발송 시간</span>
                   <strong>{reminderEnabled ? (item.reminder_time || "09:00").slice(0, 5) : "—"}</strong>
                 </div>
-              </div>
+              </div> : <p className="detail-reminder-disabled">설정에서 알림을 켜주세요.</p>}
             </section>
             <section className="detail-card">
               <h2>보관 이미지</h2>
@@ -2617,16 +2672,15 @@ export function Phase3DetailPage({
                   ) : null}
                   {images.map((image, imageIndex) =>
                     image.signed_url ? (
-                      <a
+                      <button
                         key={image.id}
-                        href={image.signed_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="detail-image-preview"
+                        type="button"
+                        className="detail-image-preview detail-image-preview-button"
                         data-active={imageIndex === activeImageIndex}
+                        onClick={() => setSelectedImage(image)}
                       >
                         <img src={image.signed_url} alt="보관된 원본 이미지" />
-                      </a>
+                      </button>
                     ) : (
                       <div key={image.id} className="detail-image-preview unavailable" data-active={imageIndex === activeImageIndex}>
                         미리보기를 불러올 수 없어요.
@@ -2650,7 +2704,7 @@ export function Phase3DetailPage({
             {recurring ? (
               <section className="detail-card detail-cumulative-card">
                 <div className="detail-cumulative-header">
-                  <h2>이용 누적</h2>
+                  <h2>이용 기록</h2>
                   <button
                     type="button"
                     className="detail-usage-button"
@@ -2675,7 +2729,7 @@ export function Phase3DetailPage({
             <ItemSupportContent itemId={item.id} />
           </aside>
         </div>
-        {showUsageDetails ? (
+        {showUsageDetails ? createPortal(
           <div className="detail-receipt-backdrop" role="presentation" onMouseDown={() => { setShowUsageDetails(false); setEditingUsageHistory(false); setReceiptEdits({}); }}>
             <section
               className="detail-receipt-modal"
@@ -2776,7 +2830,26 @@ export function Phase3DetailPage({
                 </button>
               </div>
             </section>
-          </div>
+          </div>,
+          document.body,
+        ) : null}
+        {selectedImage?.signed_url ? createPortal(
+          <div className="image-lightbox-backdrop" role="presentation" onMouseDown={() => setSelectedImage(null)}>
+            <section
+              className="image-lightbox"
+              role="dialog"
+              aria-modal="true"
+              aria-label="보관 이미지 미리보기"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <button type="button" className="image-lightbox-close" aria-label="이미지 미리보기 닫기" onClick={() => setSelectedImage(null)}>×</button>
+              <img src={selectedImage.signed_url} alt="보관된 원본 이미지 크게 보기" />
+              <a className="button primary" href={selectedImage.signed_url} download={`image-${selectedImage.id}`}>
+                이미지 다운로드
+              </a>
+            </section>
+          </div>,
+          document.body,
         ) : null}
       </main>
     </div>

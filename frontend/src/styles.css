@@ -617,6 +617,103 @@ p {
 .settings-page {
   padding: 40px 64px 64px;
 }
+.settings-subpage-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.settings-section-link {
+  display: grid;
+  gap: 8px;
+  min-height: 96px;
+  padding: 18px 22px;
+  position: relative;
+  border: 1px solid var(--glass-card-border);
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--glass-card-bg);
+  box-shadow: var(--glass-card-shadow);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  text-decoration: none;
+}
+.settings-section-link:hover {
+  border-color: rgb(183 189 202 / 80%);
+  background: rgb(255 255 255 / 88%);
+}
+.settings-section-link strong {
+  font-size: 17px;
+}
+.settings-section-link span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.settings-account-link {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.settings-defaults-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.settings-account-summary {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.settings-profile-avatar {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: #23492c;
+  background: var(--alien);
+  font-size: 18px;
+  font-weight: 800;
+}
+.settings-account-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.settings-account-copy strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-account-copy span,
+.settings-section-description {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-link-arrow {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  transform: translateY(-50%);
+  color: #7c8798;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+}
+.settings-overview-shortcuts { margin-top: 24px; }
+.settings-shortcuts-link { position: relative; margin-top: 0; }
+.settings-shortcuts-link h2 { margin: 0; padding-right: 22px; color: var(--ink); font-size: 17px; }
+.settings-shortcuts-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.settings-shortcuts-grid .button { position: relative; display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; padding-right: 36px; }
+.settings-shortcuts-grid .button-icon { width: 18px; height: 18px; }
+.settings-shortcut-arrow { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); color: #7c8798; font-size: 18px; font-weight: 500; line-height: 1; }
 .settings-title {
   display: flex;
   flex-direction: column;
@@ -629,6 +726,12 @@ p {
   align-items: start;
   gap: 24px;
 }
+.settings-layout-account,
+.settings-layout-shortcuts,
+.settings-layout-operator {
+  grid-template-columns: minmax(0, 1fr);
+}
+.settings-layout-defaults { grid-template-columns: minmax(0, 1fr); }
 .settings-primary {
   display: flex;
   flex-direction: column;
@@ -774,9 +877,18 @@ p {
   color: var(--muted);
   font-size: 12px;
 }
-.storage-summary strong {
+.storage-summary .storage-value {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.storage-summary .storage-value strong {
   color: var(--ink);
   font-size: 13px;
+}
+.storage-summary .storage-value small {
+  color: var(--muted);
+  font-size: 11px;
 }
 .deletion-card {
   border-color: #edd1cb;
@@ -927,6 +1039,14 @@ p {
   }
   .settings-layout {
     grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .settings-layout-account,
+  .settings-layout-shortcuts,
+  .settings-layout-operator {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settings-layout-defaults {
+    grid-template-columns: minmax(0, 1fr);
   }
   .desktop-nav {
     gap: 2px;
@@ -1094,6 +1214,12 @@ p {
   .settings-page,
   .dashboard {
     padding: 24px 20px 104px;
+  }
+  .settings-subpage-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-shortcuts-grid {
+    grid-template-columns: 1fr;
   }
   .settings-title {
     margin-bottom: 24px;
@@ -1639,7 +1765,7 @@ p {
 .account-legal-links a:hover {
   color: var(--primary);
 }
-.announcement-list { display: grid; gap: 16px; max-width: 900px; }
+.announcement-list { display: grid; gap: 16px; }
 .announcement-card { gap: 10px; }
 .announcement-card h2, .announcement-card p { margin: 0; }
 .announcement-card p { white-space: pre-wrap; line-height: 1.7; }
