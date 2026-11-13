@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -681,7 +682,7 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
             </p>
           </section>
         )}
-        {selectedAsset?.signed_url ? (
+        {selectedAsset?.signed_url ? createPortal(
           <div className="image-lightbox-backdrop" role="presentation" onClick={() => setSelectedAsset(null)}>
             <section
               className="image-lightbox"
@@ -696,7 +697,8 @@ export function Phase4ImageLibraryPage({ navigation }: { navigation: ReactNode }
                 이미지 다운로드
               </a>
             </section>
-          </div>
+          </div>,
+          document.body,
         ) : null}
       </main>
     </div>
