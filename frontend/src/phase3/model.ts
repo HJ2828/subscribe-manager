@@ -422,6 +422,9 @@ export function buildManagedItemPayload(
   draft: ManagedItemDraft,
   userId: string,
 ): ManagedItemPayload {
+  const amount = isMoneyType(draft.management_type) || draft.management_type === "points"
+    ? draft.amount
+    : null;
   const exactStart =
     draft.start_date_precision === "day" ? draft.start_date_value : null;
   const exactTarget =
@@ -435,7 +438,8 @@ export function buildManagedItemPayload(
     brand_domain: draft.brand_domain?.trim() || null,
     brand_logo_url: draft.brand_logo_url?.trim() || null,
     brand_icon_emoji: draft.brand_icon_emoji?.trim() || null,
-    currency: draft.amount === null ? null : draft.currency,
+    amount,
+    currency: amount === null ? null : draft.currency,
     unit_name: draft.unit_name?.trim() || null,
     conditions: draft.conditions?.trim() || null,
     payment_method: draft.payment_method?.trim() || null,

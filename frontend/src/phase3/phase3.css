@@ -513,16 +513,20 @@
   }
 
   .brand-picker-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
   }
 
   .brand-picker-row input {
-    flex: 1 1 calc(100% - 52px);
+    width: 100%;
   }
 
   .brand-picker-row .button {
-    flex: 1 1 100%;
-    width: 100%;
+    width: auto;
+    min-width: 64px;
+    padding-inline: 14px;
   }
 }
 

@@ -198,6 +198,7 @@ function PageLoading({ label }: { label: string }) {
 }
 
 function formatAmount(item: ManagedItem) {
+  if (item.management_type === "warranty" || item.management_type === "other_deadline") return "";
   if (item.amount === null) return "금액 확인 필요";
   if (item.management_type === "points")
     return `${new Intl.NumberFormat("ko-KR").format(item.amount)} ${item.unit_name || "포인트"}`;
@@ -523,8 +524,8 @@ export function Phase3ListPage({ navigation }: PageProps) {
                       <small>{typeLabel(item.management_type, true)} · {item.category || "카테고리 미정"}</small>
                     </span>
                   </span>
-                  <span className={`item-row-end${item.management_type === "other_deadline" ? " item-row-end-empty" : ""}`}>
-                    {item.management_type === "other_deadline" ? null : <strong>{formatAmount(item)}</strong>}
+                  <span className={`item-row-end${item.management_type === "other_deadline" || item.management_type === "warranty" ? " item-row-end-empty" : ""}`}>
+                    {item.management_type === "other_deadline" || item.management_type === "warranty" ? null : <strong>{formatAmount(item)}</strong>}
                     <span className="item-row-arrow" aria-hidden="true">›</span>
                   </span>
                   <span className="item-row-date">{itemDate(item)}</span>
@@ -2500,7 +2501,7 @@ export function Phase3DetailPage({
                   <dt>{isPaymentScheduleType(item.management_type) ? "다음 결제일" : "만료일"}</dt>
                   <dd>{target ? displayDate(target, targetPrecision) : "날짜 확인 필요"}</dd>
                 </div>
-                {item.management_type !== "other_deadline" ? (
+                {!['other_deadline', 'warranty'].includes(item.management_type) ? (
                   <div>
                     <dt>
                       {item.management_type === "points"

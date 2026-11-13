@@ -186,4 +186,18 @@ describe("Phase 3 list status styling key", () => {
     );
     expect(payload.lifecycle_status).toBe("unused");
   });
+
+  it("does not persist amount or currency for warranty items", () => {
+    const payload = buildManagedItemPayload(
+      {
+        ...createEmptyDraft("warranty"),
+        service_name: "제품 보증",
+        amount: 50000,
+        currency: "KRW",
+      },
+      "user-id",
+    );
+    expect(payload.amount).toBeNull();
+    expect(payload.currency).toBeNull();
+  });
 });
