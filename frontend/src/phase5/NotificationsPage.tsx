@@ -52,7 +52,8 @@ export function NotificationsPage({ navigation }: { navigation: ReactNode }) {
       if (!config.configured || !config.public_key) throw new Error("Web Push 서버 키가 아직 설정되지 않았어요. 앱 안 알림은 계속 사용할 수 있어요.");
       const permission = await Notification.requestPermission();
       if (permission !== "granted") throw new Error("브라우저 알림 권한이 허용되지 않았어요.");
-      const registration = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: applicationServerKey(config.public_key) });
       await registerPushSubscription(session.access_token, subscription.toJSON());
       setPushEnabled(true);
